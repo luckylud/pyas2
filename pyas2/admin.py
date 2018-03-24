@@ -1,7 +1,9 @@
-from django.contrib import admin
-from pyas2 import forms
-from pyas2 import models
 import os
+from django.contrib import admin
+from django.core.urlresolvers import reverse_lazy
+from django.utils.translation import ugettext_lazy as _
+
+from pyas2 import models, forms
 
 
 class PrivateCertificateAdmin(admin.ModelAdmin):
@@ -9,8 +11,11 @@ class PrivateCertificateAdmin(admin.ModelAdmin):
     list_display = ('__str__', 'download_link',)
 
     def download_link(self, obj):
-        return '<a href="/pyas2/certificates/' + os.path.basename(
-            obj.certificate.name) + '">' + 'Click Here' + '</a>'
+        return '<a title="%s" href="%s?type=private&pk=%s">%s</a>' % (
+                '%s %s' % (_('Download'), obj),
+                reverse_lazy('pyas2:download_cert'),
+                obj.pk,
+                _('Download'))
 
     download_link.allow_tags = True
     download_link.short_description = "Download Link"
@@ -20,8 +25,11 @@ class PublicCertificateAdmin(admin.ModelAdmin):
     list_display = ('__str__', 'download_link',)
 
     def download_link(self, obj):
-        return '<a href="/pyas2/certificates/' + os.path.basename(
-            obj.certificate.name) + '">' + 'Click Here' + '</a>'
+        return '<a title="%s" href="%s?type=public&pk=%s">%s</a>' % (
+                '%s %s' % (_('Download'), obj),
+                reverse_lazy('pyas2:download_cert'),
+                obj.pk,
+                _('Download'))
 
     download_link.allow_tags = True
     download_link.short_description = "Download Link"

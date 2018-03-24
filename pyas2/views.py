@@ -331,18 +331,31 @@ def send_test_mail_managers(request, *args, **kwargs):
     return redirect('pyas2:home')
 
 
-def download_cert(request, pk, *args, **kwargs):
-    cert = models.PublicCertificate.objects.filter(
-        certificate__endswith=pk).first()
-    if not cert:
-        cert = models.PrivateCertificate.objects.filter(
-            certificate__endswith=pk).first()
+def download_cert(request, *args, **kwargs):
+    if request.method == 'GET':
+        cert = None
+        typ = request.GET.get('type')
+        pk = request.GET.get('pk')
+        name = request.GET.get('name')
+        if typ == 'private':
+            model = models.PrivateCertificate
+        else:
+            model = models.PublicCertificate
+        if pk:
+            cert = model.objects.filter(pk=pk).first()
+        elif name:
+            cert = model.objects.filter(certificate__endswith=name).first()
 
-    response = HttpResponse(content_type='application/x-pem-file')
-    disposition_type = 'attachment'
-    response['Content-Disposition'] = disposition_type + '; filename=' + cert.certificate.name
-    response.write(cert.certificate.read())
-    return response
+        if cert:
+            response = HttpResponse(content_type='application/x-pem-file')
+            disposition_type = 'attachment'
+            response['Content-Disposition'] = disposition_type + '; filename=' + cert.certificate.name
+            response.write(cert.certificate.read())
+            return response
+
+        notification = _('No certificate found.')
+        messages.add_message(request, messages.INFO, notification)
+        return redirect('pyas2:home')
 
 
 @csrf_exempt
