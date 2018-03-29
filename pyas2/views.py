@@ -1,3 +1,6 @@
+
+import email
+from email.parser import HeaderParser
 from django.views.decorators.csrf import csrf_exempt
 from django.http import HttpResponse, HttpResponseRedirect, HttpResponseServerError, Http404
 from django.shortcuts import render, redirect, get_object_or_404
@@ -6,19 +9,13 @@ from django.views.generic.edit import View
 from django.core.urlresolvers import reverse
 from django.utils.translation import ugettext as _
 from django.contrib import messages
+from django.core import management
 from django.core.mail import mail_managers
 from django import template
-from email.parser import HeaderParser
-from pyas2 import models
-from pyas2 import forms
-from pyas2 import as2lib
-from pyas2 import as2utils
-from pyas2 import pyas2init
-from pyas2 import viewlib
-import subprocess
 import tempfile
 import traceback
-import email
+
+from pyas2 import models, forms, as2lib, as2utils, pyas2init, viewlib
 
 
 def server_error(request, template_name='500.html'):
@@ -97,7 +94,7 @@ class MessageSearch(View):
     def post(self, request, *args, **kwargs):
         form = self.form_class(request.POST, request.FILES)
         if form.is_valid():
-            return HttpResponseRedirect(viewlib.url_with_querystring(reverse('messages'), **form.cleaned_data))
+            return HttpResponseRedirect(viewlib.url_with_querystring(reverse('pyas2:messages'), **form.cleaned_data))
         else:
             return render(request, self.template_name, {'form': form, 'confirm': False})
 
@@ -173,7 +170,7 @@ class MDNSearch(View):
     def post(self, request, *args, **kwargs):
         form = self.form_class(request.POST, request.FILES)
         if form.is_valid():
-            return HttpResponseRedirect(viewlib.url_with_querystring(reverse('mdns'), **form.cleaned_data))
+            return HttpResponseRedirect(viewlib.url_with_querystring(reverse('pyas2:mdns'), **form.cleaned_data))
         else:
             return render(request, self.template_name, {'form': form})
 
@@ -219,17 +216,11 @@ class SendMessage(View):
         # On post transmit the uploaded file
         form = self.form_class(request.POST, request.FILES)
         if form.is_valid():
-            # Setup the python and django paths
-            python_executable_path = pyas2init.gsettings['python_path']
-            managepy_path = pyas2init.gsettings['managepy_path']
-
             # Save uploaded file to a temporary location
             temp = tempfile.NamedTemporaryFile(suffix='_%s' % request.FILES['file'].name, delete=False)
             for chunk in request.FILES['file'].chunks():
                 temp.write(chunk)
             lijst = [
-                python_executable_path,
-                managepy_path,
                 'sendas2message',
                 '--delete',
                 form.cleaned_data['organization'],
@@ -241,14 +232,14 @@ class SendMessage(View):
 
             # execute the django admin command "sendas2message" to transfer the file to partner
             try:
-                subprocess.Popen(lijst).pid
+                management.call_command(*lijst)
             except Exception as msg:
                 notification = _(u'Errors while trying to run send message: "%s".') % msg
                 messages.add_message(request, messages.INFO, notification)
                 pyas2init.logger.info(notification)
             else:
                 messages.add_message(request, messages.INFO, _(u'Sending the message to your partner ......'))
-            return HttpResponseRedirect(reverse('home'))
+            return redirect('pyas2:home')
         else:
             return render(request, self.template_name, {'form': form})
 
@@ -258,19 +249,14 @@ def resend_message(request, pk, *args, **kwargs):
 
     # Get the message to be resent
     orig_message = models.Message.objects.get(message_id=pk)
-    # Setup the python and django path
-    python_executable_path = pyas2init.gsettings['python_path']
-    managepy_path = pyas2init.gsettings['managepy_path']
 
     # Copy the message payload to a temporary location
     temp = tempfile.NamedTemporaryFile(suffix='_%s' % orig_message.payload.name, delete=False)
     with open(orig_message.payload.file, 'rb+') as source:
         temp.write(source.read())
 
-    # execute the django admin command "sendas2message" to transfer the file to partner
+    # execute django admin command "sendas2message" to transfer the file to partner
     lijst = [
-        python_executable_path,
-        managepy_path,
         'sendas2message',
         orig_message.organization.as2_name,
         orig_message.partner.as2_name,
@@ -278,53 +264,46 @@ def resend_message(request, pk, *args, **kwargs):
     ]
     pyas2init.logger.info(_(u'Re-send message started with parameters: "%(parameters)s"'), {'parameters': str(lijst)})
     try:
-        subprocess.Popen(lijst).pid
+        management.call_command(*lijst)
     except Exception as msg:
         notification = _(u'Errors while trying to re-send message: "%s".') % msg
         messages.add_message(request, messages.INFO, notification)
         pyas2init.logger.info(notification)
     else:
         messages.add_message(request, messages.INFO, _(u'Re-Sending the message to your partner ......'))
-    return HttpResponseRedirect(reverse('home'))
+    return redirect('pyas2:home')
 
 
 def send_async_mdn(request, *args, **kwargs):
     """Send all pending asynchronous MDNs to all partners"""
-    # Setup the python and django paths
-    python_executable_path = pyas2init.gsettings['python_path']
-    managepy_path = pyas2init.gsettings['managepy_path']
 
-    # execute the django admin command "sendasyncmdn" to transfer the file to partner
-    lijst = [python_executable_path, managepy_path, 'sendasyncmdn']
+    # execute django admin command "sendasyncmdn" to transfer the file to partner
+    lijst = ['sendasyncmdn']
     pyas2init.logger.info(_(u'Send async MDNs started with parameters: "%(parameters)s"'), {'parameters': str(lijst)})
     try:
-        subprocess.Popen(lijst).pid
+        management.call_command(*lijst)
     except Exception as msg:
         notification = _(u'Errors while trying to run send async MDNs: "%s".') % msg
         messages.add_message(request, messages.INFO, notification)
     else:
         messages.add_message(request, messages.INFO, _(u'Sending all pending asynchronous MDNs .....'))
-    return HttpResponseRedirect(reverse('home'))
+    return redirect('pyas2:home')
 
 
 def retry_failed_comms(request, *args, **kwargs):
     """ Retry communications for all failed outbound messages"""
-    # Setup the python and django paths
-    python_executable_path = pyas2init.gsettings['python_path']
-    managepy_path = pyas2init.gsettings['managepy_path']
 
-    # execute the django admin command "retryfailedas2comms" to transfer the file to partner
-    lijst = [python_executable_path, managepy_path, 'retryfailedas2comms']
+    lijst = ['retryfailedas2comms']
     pyas2init.logger.info(_(u'Retry Failed communications started with parameters: "%(parameters)s"'),
-                          {'parameters': str(lijst)})
+        {'parameters': str(lijst)})
     try:
-        subprocess.Popen(lijst).pid
+        management.call_command(*lijst)
     except Exception as msg:
         notification = _(u'Errors while trying to retrying failed communications: "%s".') % msg
         messages.add_message(request, messages.INFO, notification)
     else:
         messages.add_message(request, messages.INFO, _(u'Retrying failed communications .....'))
-    return HttpResponseRedirect(reverse('home'))
+    return redirect('pyas2:home')
 
 
 def cancel_retries(request, pk, *args, **kwargs):
@@ -334,7 +313,7 @@ def cancel_retries(request, pk, *args, **kwargs):
     models.Log.objects.create(message=message, status='S', text=_(u'User cancelled further retires for this message'))
     message.save()
     messages.add_message(request, messages.INFO, _(u'Cancelled retries for message %s' % pk))
-    return HttpResponseRedirect(reverse('messages'))
+    return redirect('pyas2:messages')
 
 
 def send_test_mail_managers(request, *args, **kwargs):
@@ -345,11 +324,11 @@ def send_test_mail_managers(request, *args, **kwargs):
         txt = as2utils.txtexc()
         messages.add_message(request, messages.INFO, _(u'Sending test mail failed.'))
         pyas2init.logger.info(_(u'Sending test mail failed, error:\n%(txt)s'), {'txt': txt})
-        return redirect(reverse('home'))
+        return redirect('pyas2:home')
     notification = _(u'Sending test mail succeeded.')
     messages.add_message(request, messages.INFO, notification)
     pyas2init.logger.info(notification)
-    return redirect(reverse('home'))
+    return redirect('pyas2:home')
 
 
 def download_cert(request, pk, *args, **kwargs):
@@ -372,6 +351,8 @@ def as2receive(request, *args, **kwargs):
        Function receives AS2 requests from partners.
        Checks whether its an AS2 message or an MDN and acts accordingly.
     """
+    # Log requests
+    pyas2init.logger.info('%(REMOTE_ADDR)s %(REQUEST_METHOD)s %(REQUEST_URI)s' % request.META)
     if request.method == 'POST':
         # Process the posted AS2 message
         request_body = request.read()
@@ -578,6 +559,15 @@ def as2receive(request, *args, **kwargs):
             # error%(time)s')%{'time':request.META.get('HTTP_DATE')}, reporttxt)
 
     elif request.method == 'GET':
+        '''
+        if pyas2init.gsettings['log_level'] in ['DEBUG',]:
+            for k, v in request.__dict__.items():
+                if isinstance(v, dict):
+                    for m, n in v.items():
+                        pyas2init.logger.debug('%s %s: %s' % (k, m, n))
+                    continue
+                pyas2init.logger.debug('%s: %s' % (k, v))
+        '''
         return HttpResponse(_('To submit an AS2 message, you must POST the message to this URL '))
 
     elif request.method == 'OPTIONS':

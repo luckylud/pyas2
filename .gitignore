@@ -58,6 +58,8 @@ target/
 .idea/
 
 #PyAS2
+db/
+media/
 messages/
 certificates/
 logging/

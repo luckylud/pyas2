@@ -13,6 +13,10 @@ setup(
     version=__version__,
     packages=['pyas2'],
     include_package_data=True,
+    scripts=[
+        'scripts/pyas2-receiver.py',
+        'scripts/pyas2-webserver.py',
+        ],
     license='GNU GPL v2.0',  # example license
     description='A pythonic AS2 application for file tranfers.',
     long_description=README,
@@ -39,7 +43,7 @@ setup(
     ],
     keywords='AS2 AS2Server RFC4130 FileTransfer',
     install_requires=[
-        'django>1.9, <=1.10.6',
+        'django>1.9, <1.11',
         'cherrypy>6, <=8.9.1',
         'requests',
         'm2crypto',

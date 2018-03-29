@@ -28,18 +28,18 @@ Messages
                     <div class="dropdown">
                         <img class="action" src="{% static "images/star.png" %}" />
                         <ul>
-                            <li><button class="pyas2header" onclick="document.location.href='{% url "message_detail" row.message_id %}'; return false;" >{% trans 'View Detail' %}</button></li>
+                            <li><button class="pyas2header" onclick="document.location.href='{% url 'pyas2:message_detail' row.message_id %}'; return false;" >{% trans 'View Detail' %}</button></li>
                             {% if row.payload %}
-                                <li><button class="pyas2header" onclick="window.open('{% url 'payload_view' row.message_id %}?action=this'); return false;" >{% trans 'View Payload' %}</button></li>
+                                <li><button class="pyas2header" onclick="window.open('{% url 'pyas2:payload_view' row.message_id %}?action=this'); return false;" >{% trans 'View Payload' %}</button></li>
                             {% endif %}
                             {% if row.mdn %}
-                                <li><button class="pyas2header" onclick="window.open('{% url 'mdn_view' row.mdn.message_id %}?action=this'); return false;" >{% trans 'View MDN' %}</button></li>
+                                <li><button class="pyas2header" onclick="window.open('{% url 'pyas2:mdn_view' row.mdn.message_id %}?action=this'); return false;" >{% trans 'View MDN' %}</button></li>
                             {% endif %}
                             {% if row.status == "R" %} 
-                            <li><button class="pyas2header" onclick="document.location.href='{% url 'cancelretries' row.message_id %}'; return false;">{% trans 'Cancel Retries' %}</button></li>
+                            <li><button class="pyas2header" onclick="document.location.href='{% url 'pyas2:cancelretries' row.message_id %}'; return false;">{% trans 'Cancel Retries' %}</button></li>
                             {% endif %}
                             {% if row.direction == 'OUT' %}
-                            <li><button class="pyas2header" onclick="document.location.href='{% url "resendmessage" row.message_id %}'; return false;" >{% trans 'Resend as new message' %}</button></li>
+                            <li><button class="pyas2header" onclick="document.location.href='{% url 'pyas2:resendmessage' row.message_id %}'; return false;" >{% trans 'Resend as new message' %}</button></li>
                             {% endif %}
                         </ul>
                     </div>
@@ -58,12 +58,12 @@ Messages
                         <img src="{% static "images/icon-pass.gif" %}" style="width: 1em;"/>
                     {% endif %}
                 </td>
-                <td class="nowrap"><a href="{% url "message_detail" row.message_id %}" class="pyas2link">{{row.message_id}}</a></td>
+                <td class="nowrap"><a href="{% url 'pyas2:message_detail' row.message_id %}" class="pyas2link">{{row.message_id}}</a></td>
                 <td class="nowrap">{{row.organization}}</td>
                 <td class="nowrap">{{row.partner}}</td>
-                <td class="nowrap">{% if row.payload %} <a target="_blank" href="{% url 'payload_view' row.message_id %}?action=this">View Payload</a>{% endif %}</td>
+                <td class="nowrap">{% if row.payload %} <a target="_blank" href="{% url 'pyas2:payload_view' row.message_id %}?action=this">View Payload</a>{% endif %}</td>
                 <td class="nowrap">{{row.get_mdn_mode_display}}</td>
-                <td class="nowrap">{% if row.mdn %}<a target="_blank" href="{% url 'mdn_view' row.mdn.message_id %}?action=this">View MDN{% endif %}</td>
+                <td class="nowrap">{% if row.mdn %}<a target="_blank" href="{% url 'pyas2:mdn_view' row.mdn.message_id %}?action=this">View MDN{% endif %}</td>
             </tr>
         {% endfor %}
         </tbody>

@@ -1,16 +1,17 @@
+
+import os
 from django.db import models
-from django.core.files.storage import FileSystemStorage
 from django.utils.translation import ugettext as _
 from django.db.models.signals import post_save
 from django.dispatch import receiver
-from pyas2 import pyas2init
-from pyas2 import as2utils
-import os
+
+from pyas2 import pyas2init, as2utils
 
 
 # Initialize the pyas2 settings and loggers
 pyas2init.initialize()
-pyas2init.initserverlogging('pyas2')
+pyas2init.initserverlogging('pyas2%s_%s' %
+    (pyas2init.gsettings['server'], pyas2init.gsettings['environment']))
 
 # Set default entry for selects
 DEFAULT_ENTRY = ('', "---------")
@@ -18,7 +19,7 @@ DEFAULT_ENTRY = ('', "---------")
 
 # Set the storage directory for certificates
 def get_certificate_path(instance, filename):
-    return os.path.join(pyas2init.gsettings['root_dir'], 'certificates', filename)
+    return '/'.join((pyas2init.gsettings['media_uri'], 'certificates', filename))
 
 
 class PrivateCertificate(models.Model):
@@ -108,10 +109,10 @@ class Partner(models.Model):
     content_type = models.CharField(max_length=100, choices=CONTENT_TYPE_CHOICES, default='application/edi-consent')
     compress = models.BooleanField(verbose_name=_('Compress Message'), default=True)
     encryption = models.CharField(max_length=20, verbose_name=_('Encrypt Message'), choices=ENCRYPT_ALG_CHOICES,
-                                  null=True, blank=True)
+        null=True, blank=True)
     encryption_key = models.ForeignKey(PublicCertificate, related_name='enc_partner', null=True, blank=True)
     signature = models.CharField(max_length=20, verbose_name=_('Sign Message'), choices=SIGN_ALG_CHOICES, null=True,
-                                 blank=True)
+        blank=True)
     signature_key = models.ForeignKey(PublicCertificate, related_name='sign_partner', null=True, blank=True)
     mdn = models.BooleanField(verbose_name=_('Request MDN'), default=False)
     mdn_mode = models.CharField(max_length=20, choices=MDN_TYPE_CHOICES, null=True, blank=True)

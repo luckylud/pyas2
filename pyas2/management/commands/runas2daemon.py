@@ -1,3 +1,4 @@
+from django.core import management
 from django.core.management.base import BaseCommand, CommandError
 from django.utils.translation import ugettext as _
 from pyas2 import models
@@ -8,7 +9,6 @@ import atexit
 import socket
 import os
 import sys
-import subprocess
 import threading
 
 if os.name == 'nt':
@@ -153,8 +153,6 @@ class Command(BaseCommand):
         dir_watch_data = []
         orgs = models.Organization.objects.all()
         partners = models.Partner.objects.all()
-        python_executable_path = pyas2init.gsettings['python_path']
-        managepy_path = pyas2init.gsettings['managepy_path']
         for partner in partners:
             for org in orgs:
                 dir_watch_data.append({})
@@ -169,10 +167,10 @@ class Command(BaseCommand):
         for dir_watch in dir_watch_data:
             files = [f for f in os.listdir(dir_watch['path']) if os.path.isfile(as2utils.join(dir_watch['path'], f))]
             for file in files:
-                lijst = [python_executable_path, managepy_path, 'sendas2message', '--delete', dir_watch['organization'],
+                lijst = ['sendas2message', '--delete', dir_watch['organization'],
                          dir_watch['partner'], as2utils.join(dir_watch['path'], file)]
                 pyas2init.logger.info(u'Send as2 message with params "%(task)s".', {'task': lijst})
-                subprocess.Popen(lijst)
+                management.call_command(*lijst)
         if os.name == 'nt':
             # for windows: start a thread per directory watcher
             for dir_watch in dir_watch_data:
@@ -208,10 +206,10 @@ class Command(BaseCommand):
                     if current_time - last_time >= timeout:
                         try:
                             for task in tasks:
-                                lijst = [python_executable_path, managepy_path, 'sendas2message', '--delete', task[0],
+                                lijst = ['sendas2message', '--delete', task[0],
                                          task[1], task[2]]
                                 pyas2init.logger.info(u'Send as2 message with params "%(task)s".', {'task': lijst})
-                                subprocess.Popen(lijst)
+                                management.call_command(*lijst)
                         except Exception as msg:
                             pyas2init.logger.info(u'Error in running task: "%(msg)s".', {'msg': msg})
                         tasks.clear()
