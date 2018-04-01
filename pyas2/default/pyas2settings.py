@@ -51,6 +51,8 @@ PYAS2 = {
     'LOGCONSOLELEVEL': 'DEBUG',
     'MAXRETRIES': 5,
     'MAXARCHDAYS': 30,
+    # DAEMON ###
+    'DAEMONPORT': 16388,
     # Webserver ###
     'HOST': 'localhost',
     'PORT': 8888,

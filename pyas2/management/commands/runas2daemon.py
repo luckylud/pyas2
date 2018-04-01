@@ -81,7 +81,7 @@ else:
         import pyinotify
     except Exception as msg:
         raise ImportError(
-            u'Dependency failure: bots directory monitoring requires python library "pyinotify" on linux.')
+            'Dependency failure: pyas2 directory monitoring requires python library "pyinotify" on linux.')
 
 
     class LinuxEventHandler(pyinotify.ProcessEvent):
