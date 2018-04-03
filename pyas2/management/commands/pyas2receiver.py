@@ -58,9 +58,6 @@ class Command(BaseCommand):
                 pyas2init.logger.log(25, _('PyAS2 %s uses ssl (https).' % pyas2init.gsettings['server']))
         else:
             pyas2init.logger.log(25, _('PyAS2 %s uses plain http (no ssl).' % pyas2init.gsettings['server']))
-        pyas2init.logger.info('PyAS2 config:')
-        pyas2init.logger.info('root_dir        : %s' % pyas2init.gsettings['root_dir'])
-        pyas2init.logger.info('pyas2 database  : %s' % pyas2init.gsettings['db_pyas2'])
         pyas2init.logger.info(
             _('PyAS2 %s listning at: ' % pyas2init.gsettings['server']) +
             '"%(protocol)s://%(as2_host)s:%(as2_port)s/%(as2_uri)s"' % pyas2init.gsettings)

@@ -152,15 +152,28 @@ def initialize():
         gsettings['max_arch_days'] = pyas2_settings.get('MAXARCHDAYS', 30)
         gsettings['minDate'] = 0 - gsettings['max_arch_days']
 
+        # Init logging
+        initserverlogging('pyas2%s_%s' % (gsettings['server'], gsettings['environment']))
+
         # Display infos
-        sys.stderr.write('STATIC_ROOT: %s\n' % settings.STATIC_ROOT)
-        sys.stderr.write('PYAS2_ROOT: %s\n' % gsettings['root_dir'])
-        sys.stderr.write('MEDIA_ROOT: %s\n' % settings.MEDIA_ROOT)
-        sys.stderr.write('PYAS2_MEDIA_URI: %s\n' % gsettings['media_uri'])
+        logger.info('###########################################')
+        logger.info('PYAS2 %s Initialised successfully.' % gsettings['server'])
+        logger.info('PYAS2_SETTINGS_FILE: %s' % os.environ.get('PYAS2_SETTINGS_FILE'))
+        logger.info('ENVIRONMENT: %s' % gsettings['environment'])
+        logger.info('PYAS2_ROOT: %s' % gsettings['root_dir'])
+        logger.info('MEDIA_ROOT: %s' % settings.MEDIA_ROOT)
+        logger.info('PYAS2_MEDIA_URI: %s' % gsettings['media_uri'])
+        logger.info('default database  : %s' % gsettings['db_default'])
+        logger.info('pyas2 database    : %s' % gsettings['db_pyas2'])
         if hasattr(settings, 'DATABASE_ROUTERS'):
-            sys.stderr.write('DATABASE_ROUTERS: %s\n' % settings.DATABASE_ROUTERS)
+            logger.info('DATABASE_ROUTERS: %s' % settings.DATABASE_ROUTERS)
             if not settings.DATABASES.get('pyas2') and 'pyas2.dbrouter.Pyas2dbRouter' in settings.DATABASE_ROUTERS:
-                raise Exception('%s\n' % _("Error: 'pyas2' database not set in DATABASES settings !"))
+                err = _("Error: 'pyas2' database not set in DATABASES settings !")
+                logger.error(err)
+                raise Exception('%s\n' % err)
+        if gsettings['server'] == 'webserver':
+            logger.info('STATIC_ROOT: %s' % settings.STATIC_ROOT)
+        logger.info('###########################################')
 
 
 def initserverlogging(logname):

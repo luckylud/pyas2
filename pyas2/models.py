@@ -10,8 +10,6 @@ from pyas2 import pyas2init, as2utils
 
 # Initialize the pyas2 settings and loggers
 pyas2init.initialize()
-pyas2init.initserverlogging('pyas2%s_%s' %
-    (pyas2init.gsettings['server'], pyas2init.gsettings['environment']))
 
 # Set default entry for selects
 DEFAULT_ENTRY = ('', "---------")
