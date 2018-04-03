@@ -32,9 +32,9 @@ def Pyas2settingsModname():
     PYAS2_SETTINGS_FILE=c:\\path\\to\\pyas2settings.py
 
     '''
-    import pyas2.default
+    import pyas2.config
 
-    default_path = os.path.dirname(pyas2.default.__file__)
+    default_path = os.path.dirname(pyas2.config.__file__)
 
     pyas2_settings_path = default_path
     default_modname = 'pyas2settings'

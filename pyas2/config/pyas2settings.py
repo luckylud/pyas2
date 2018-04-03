@@ -37,7 +37,7 @@ PYAS2 = {
     'MEDIAURI': 'pyas2',
     # As2 receiver ###
     'AS2HOST': 'localhost',  # set WAN IP or domaine hostname
-    'AS2PORT': 8889,
+    'AS2PORT': 8880,
     'AS2URI': 'as2receive',
     # MDN URL # uncomment to overide, default mdn url is build
     # this way  http(s)://AS2HOST:AS2PORT/AS2URI
@@ -55,7 +55,7 @@ PYAS2 = {
     'DAEMONPORT': 16388,
     # Webserver ###
     'HOST': 'localhost',
-    'PORT': 8888,
+    'PORT': 8890,
     'ENVIRONMENTTEXT': 'BETA',
     'ENVIRONMENTTEXTCOLOR': 'Yellow',
 }
