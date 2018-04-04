@@ -216,10 +216,15 @@ class SendMessage(View):
         # On post transmit the uploaded file
         form = self.form_class(request.POST, request.FILES)
         if form.is_valid():
+            f = request.FILES.get('file')
             # Save uploaded file to a temporary location
-            temp = tempfile.NamedTemporaryFile(suffix='_%s' % request.FILES['file'].name, delete=False)
-            for chunk in request.FILES['file'].chunks():
-                temp.write(chunk)
+            temp = tempfile.NamedTemporaryFile(suffix='_%s' % f.name, delete=False)
+            if f.multiple_chunks:
+                for chunk in f.chunks():
+                    temp.write(chunk)
+            else:
+                temp.write(f.read())
+            temp.close()
             lijst = [
                 'sendas2message',
                 '--delete',
@@ -227,21 +232,22 @@ class SendMessage(View):
                 form.cleaned_data['partner'],
                 temp.name
             ]
-            pyas2init.logger.info(_(u'Send message started with parameters: "%(parameters)s"'),
-                                  {'parameters':str(lijst)})
+            pyas2init.logger.info(_('Send message started with parameters: "%(parameters)s"'),
+                                  {'parameters': str(lijst)})
 
             # execute the django admin command "sendas2message" to transfer the file to partner
+            messages.add_message(request, messages.INFO,
+                                 _('Sending file %(file)s to partner %(partner)s ...' % {
+                                     'file': f.name,
+                                     'partner': form.cleaned_data['partner']
+                                 }))
             try:
                 management.call_command(*lijst)
             except Exception as msg:
-                notification = _(u'Errors while trying to run send message: "%s".') % msg
+                notification = _('Errors while trying to run send message: "%s".') % msg
                 messages.add_message(request, messages.INFO, notification)
-                pyas2init.logger.info(notification)
-            else:
-                messages.add_message(request, messages.INFO, _(u'Sending the message to your partner ......'))
-            return redirect('pyas2:home')
-        else:
-            return render(request, self.template_name, {'form': form})
+                pyas2init.logger.error(notification)
+        return render(request, self.template_name, {'form': form})
 
 
 def resend_message(request, pk, *args, **kwargs):
