@@ -12,6 +12,7 @@ from django.contrib import messages
 from django.core import management
 from django.core.mail import mail_managers
 from django import template
+from multiprocessing import Process
 import tempfile
 import traceback
 
@@ -75,7 +76,7 @@ class MessageList(ListView):
 class MessageDetail(DetailView):
     """ Generic detail view to display the message details"""
     model = models.Message
-   
+
     def get_context_data(self, **kwargs):
         context = super(MessageDetail, self).get_context_data(**kwargs)
         context['logs'] = models.Log.objects.filter(message=kwargs['object']).order_by('timestamp')
@@ -86,7 +87,7 @@ class MessageSearch(View):
     """ Generic view with a form for searching messages in the system"""
     form_class = forms.MessageSearchForm
     template_name = 'pyas2/message_search.html'
-   
+
     def get(self, request, *args, **kwargs):
         form = self.form_class()
         return render(request, self.template_name, {'form': form})
@@ -242,7 +243,8 @@ class SendMessage(View):
                                      'partner': form.cleaned_data['partner']
                                  }))
             try:
-                management.call_command(*lijst)
+                p = Process(target=management.call_command, args=lijst)
+                p.start()
             except Exception as msg:
                 notification = _('Errors while trying to run send message: "%s".') % msg
                 messages.add_message(request, messages.INFO, notification)
@@ -270,7 +272,8 @@ def resend_message(request, pk, *args, **kwargs):
     ]
     pyas2init.logger.info(_(u'Re-send message started with parameters: "%(parameters)s"'), {'parameters': str(lijst)})
     try:
-        management.call_command(*lijst)
+        p = Process(target=management.call_command, args=lijst)
+        p.start()
     except Exception as msg:
         notification = _(u'Errors while trying to re-send message: "%s".') % msg
         messages.add_message(request, messages.INFO, notification)
@@ -287,7 +290,8 @@ def send_async_mdn(request, *args, **kwargs):
     lijst = ['sendasyncmdn']
     pyas2init.logger.info(_(u'Send async MDNs started with parameters: "%(parameters)s"'), {'parameters': str(lijst)})
     try:
-        management.call_command(*lijst)
+        p = Process(target=management.call_command, args=lijst)
+        p.start()
     except Exception as msg:
         notification = _(u'Errors while trying to run send async MDNs: "%s".') % msg
         messages.add_message(request, messages.INFO, notification)
@@ -301,9 +305,10 @@ def retry_failed_comms(request, *args, **kwargs):
 
     lijst = ['retryfailedas2comms']
     pyas2init.logger.info(_(u'Retry Failed communications started with parameters: "%(parameters)s"'),
-        {'parameters': str(lijst)})
+                          {'parameters': str(lijst)})
     try:
-        management.call_command(*lijst)
+        p = Process(target=management.call_command, args=lijst)
+        p.start()
     except Exception as msg:
         notification = _(u'Errors while trying to retrying failed communications: "%s".') % msg
         messages.add_message(request, messages.INFO, notification)

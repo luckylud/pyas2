@@ -167,10 +167,14 @@ class Command(BaseCommand):
         for dir_watch in dir_watch_data:
             files = [f for f in os.listdir(dir_watch['path']) if os.path.isfile(as2utils.join(dir_watch['path'], f))]
             for file in files:
-                lijst = ['sendas2message', '--delete', dir_watch['organization'],
-                         dir_watch['partner'], as2utils.join(dir_watch['path'], file)]
+                lijst = ['sendas2message',
+                        '--delete',
+                        dir_watch['organization'],
+                        dir_watch['partner'],
+                        as2utils.join(dir_watch['path'], file)]
                 pyas2init.logger.info(u'Send as2 message with params "%(task)s".', {'task': lijst})
-                management.call_command(*lijst)
+                p = Process(target=management.call_command, args=lijst)
+                p.start()
         if os.name == 'nt':
             # for windows: start a thread per directory watcher
             for dir_watch in dir_watch_data:
@@ -206,10 +210,14 @@ class Command(BaseCommand):
                     if current_time - last_time >= timeout:
                         try:
                             for task in tasks:
-                                lijst = ['sendas2message', '--delete', task[0],
-                                         task[1], task[2]]
+                                lijst = ['sendas2message',
+                                         '--delete',
+                                         task[0],
+                                         task[1],
+                                         task[2]]
                                 pyas2init.logger.info(u'Send as2 message with params "%(task)s".', {'task': lijst})
-                                management.call_command(*lijst)
+                                p = Process(target=management.call_command, args=lijst)
+                                p.start()
                         except Exception as msg:
                             pyas2init.logger.info(u'Error in running task: "%(msg)s".', {'msg': msg})
                         tasks.clear()
