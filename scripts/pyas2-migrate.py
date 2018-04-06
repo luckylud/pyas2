@@ -2,7 +2,7 @@
 
 from pyas2.pyas2init import pyas2setup
 
-pyas2server = 'pyas2webserver'
+pyas2server = 'webserver'
 pyas2setup(pyas2server)
 
 from django.conf import settings
