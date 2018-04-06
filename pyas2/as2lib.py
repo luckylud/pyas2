@@ -440,6 +440,13 @@ def send_message(message, payload):
         if message.partner.https_ca_cert:
             verify = message.partner.https_ca_cert.path
 
+        # ASYNC MDN
+        if message.partner.mdn and message.partner.mdn_mode == 'ASYNC':
+            models.Log.objects.create(message=message, status='S',
+                                      text=_('ASYNC MDN requested.'))
+            message.status = 'P'
+            message.save()
+
         # Send the AS2 message to the partner
         try:
             response = requests.post(message.partner.target_url,
@@ -448,22 +455,23 @@ def send_message(message, payload):
                                      headers=dict(message_header.items()),
                                      data=payload)
             response.raise_for_status()
-        except Exception, e:
+
+        except Exception as e:
             # Send mail here
             as2utils.senderrorreport(message, _(u'Failure during transmission of message to partner with error '
                                                 u'"%s".\n\nTo retry transmission run the management '
                                                 u'command "retryfailedas2comms".' % e))
             message.status = 'R'
+            message.save()
             models.Log.objects.create(message=message, status='E', text=_(u'Message send failed with error %s' % e))
             return
-        models.Log.objects.create(message=message, status='S', text=_(u'AS2 message successfully sent to partner'))
+
+        models.Log.objects.create(message=message, status='S', text=_('AS2 message successfully sent to partner'))
 
         # Process the MDN based on the partner profile settings
         if message.partner.mdn:
             if message.partner.mdn_mode == 'ASYNC':
-                models.Log.objects.create(message=message, status='S',
-                                          text=_(u'Requested ASYNC MDN from partner, waiting for it ........'))
-                message.status = 'P'
+                # message.mdn and message.status is updated asynchronnely
                 return
             # In case of Synchronous MDN the response content will be the MDN. So process it.
             # Get the response headers, convert key to lower case for normalization
@@ -474,17 +482,20 @@ def send_message(message, payload):
             mdn_content += response.content
             models.Log.objects.create(message=message, status='S', text=_(u'Synchronous mdn received from partner'))
             pyas2init.logger.debug('Synchronous MDN for message %s received:\n%s' % (message.message_id, mdn_content))
+            # save_mdn() already save message at the end by calling message.save()
             save_mdn(message, mdn_content)
         else:
             message.status = 'S'
             models.Log.objects.create(message=message,
                                       status='S',
                                       text=_(u'No MDN needed, File Transferred successfully to the partner'))
+            message.save()
 
             # Run the post successful send command
             run_post_send(message)
-    finally:
-        message.save()
+
+    except Exception as e:
+        raise Exception(e)
 
 
 def save_mdn(message, mdn_content):
