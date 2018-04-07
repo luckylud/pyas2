@@ -1,15 +1,11 @@
+
+import os
+import time
+import shutil
+import email.utils
 from django.core.management.base import BaseCommand, CommandError
 from django.utils.translation import ugettext as _
-from pyas2 import models
-from pyas2 import as2lib
-from pyas2 import as2utils
-from pyas2 import pyas2init 
-from optparse import make_option
-import email.utils
-import shutil
-import time
-import os
-import sys
+from pyas2 import models, as2lib, as2utils, pyas2init
 
 
 class Command(BaseCommand):
@@ -70,7 +66,7 @@ class Command(BaseCommand):
         # Build and send the AS2 message
         try:
             payload = as2lib.build_message(message)
-            as2lib.send_message(message, payload)	
+            as2lib.send_message(message, payload)
         except Exception as e:
             pyas2init.logger.error(_('Failed to send message, error:\n%(txt)s') % {'txt': as2utils.txtexc()})
             message.status = 'E'
