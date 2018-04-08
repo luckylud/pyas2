@@ -1,9 +1,9 @@
-import os
+
 from django.contrib import admin
 from django.core.urlresolvers import reverse_lazy
 from django.utils.translation import ugettext_lazy as _
 
-from pyas2 import models, forms
+from . import models, forms
 
 
 class PrivateCertificateAdmin(admin.ModelAdmin):
@@ -69,9 +69,31 @@ class OrganizationAdmin(admin.ModelAdmin):
     list_filter = ('name', 'as2_name')
 
 
+class MessageAdmin(admin.ModelAdmin):
+    readonly_fields = [f.name for f in models.Message._meta.fields]
+    list_display = ['message_id', 'status', 'direction', 'partner', 'timestamp']
+    list_filter = ['direction', 'status', 'partner']
+    search_fields = ['message_id']
+
+    def has_add_permission(self, request):
+        return False
+
+    def changeform_view(self, request, object_id=None, form_url='', extra_context=None):
+        extra_context = extra_context or {}
+        extra_context['show_save_and_continue'] = False
+        extra_context['show_save'] = False
+        return super(MessageAdmin, self).changeform_view(request, object_id, extra_context=extra_context)
+
+
+class MdnAdmin(admin.ModelAdmin):
+    list_display = ['message_id', 'status', 'signed', 'timestamp']
+    list_filter = ['status', 'signed']
+    search_fields = ['message_id']
+
+
 admin.site.register(models.PrivateCertificate, PrivateCertificateAdmin)
 admin.site.register(models.PublicCertificate, PublicCertificateAdmin)
 admin.site.register(models.Organization, OrganizationAdmin)
 admin.site.register(models.Partner, PartnerAdmin)
-admin.site.register(models.Message)
-admin.site.register(models.MDN)
+admin.site.register(models.Message, MessageAdmin)
+admin.site.register(models.MDN, MdnAdmin)
