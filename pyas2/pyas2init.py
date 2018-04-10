@@ -1,10 +1,11 @@
 # -*- coding: utf-8 -*-
 
-import logging
 import os
 import sys
+import logging
 
-from pyas2 import as2utils
+from . import as2utils
+
 
 # Declare global variables
 gsettings = {}
@@ -139,6 +140,8 @@ def initialize():
         gsettings['payload_send_store'] = as2utils.join(gsettings['root_dir'], 'messages', '__store', 'payload', 'sent')
         gsettings['mdn_receive_store'] = as2utils.join(gsettings['root_dir'], 'messages', '__store', 'mdn', 'received')
         gsettings['mdn_send_store'] = as2utils.join(gsettings['root_dir'], 'messages', '__store', 'mdn', 'sent')
+        gsettings['raw_receive_store'] = as2utils.join(gsettings['root_dir'], 'messages', '__store', 'raw', 'received')
+        gsettings['raw_send_store'] = as2utils.join(gsettings['root_dir'], 'messages', '__store', 'raw', 'sent')
         gsettings['log_dir'] = as2utils.join(gsettings['root_dir'], 'logging')
         for sett in ['payload_receive_store', 'payload_send_store', 'mdn_receive_store', 'mdn_send_store', 'log_dir']:
             as2utils.dirshouldbethere(gsettings[sett])
