@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 
 import os
 import time
@@ -5,11 +6,12 @@ import shutil
 import email.utils
 from django.core.management.base import BaseCommand, CommandError
 from django.utils.translation import ugettext as _
+
 from pyas2 import models, as2lib, as2utils, pyas2init
 
 
 class Command(BaseCommand):
-    help = _(u'Send an as2 message to your trading partner')
+    help = _('Send an as2 message to your trading partner')
     args = '<organization_as2name partner_as2name path_to_payload>'
 
     def add_arguments(self, parser):
@@ -75,4 +77,3 @@ class Command(BaseCommand):
 
             # Send mail here
             as2utils.senderrorreport(message, _('Failed to send message, error is %s' % e))
-            raise Exception(e)
