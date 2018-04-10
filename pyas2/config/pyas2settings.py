@@ -82,3 +82,14 @@ DATABASES = {
 }
 
 DATABASE_ROUTERS = ['pyas2.dbrouter.Pyas2dbRouter',]
+
+#********* sessions cookies *************************
+SESSION_COOKIE_NAME = 'pyas2-%s' % PYAS2_ENV
+SESSION_EXPIRE_AT_BROWSER_CLOSE = True    # True: always log in when browser is closed
+SESSION_COOKIE_AGE = 28800                # Inactivity Expiration time of cookie in seconds
+SESSION_SAVE_EVERY_REQUEST = True         # if True: SESSION_COOKIE_AGE is interpreted as: since last activity
+# Settings for CSRF cookie.
+CSRF_COOKIE_NAME = 'gsvtpyas2%s' % PYAS2_ENV
+CSRF_COOKIE_DOMAIN = None
+CSRF_COOKIE_PATH = '/'
+CSRF_COOKIE_SECURE = False
