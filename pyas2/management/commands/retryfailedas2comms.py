@@ -1,9 +1,9 @@
+# -*- coding: utf-8 -*-
+
 from django.core.management.base import BaseCommand
 from django.utils.translation import ugettext as _
-from pyas2 import models
-from pyas2 import pyas2init
-from pyas2 import as2lib
-from pyas2 import as2utils
+
+from pyas2 import models, pyas2init, as2lib, as2utils
 
 
 class Command(BaseCommand):
@@ -17,10 +17,7 @@ class Command(BaseCommand):
 
         for failed_msg in failed_msgs:
             # Increase the retry count
-            if not failed_msg.retries:
-                failed_msg.retries = 1
-            else:
-                failed_msg.retries += failed_msg.retries
+            failed_msg.retries += 1
 
             # if max retries has exceeded then mark message status as error
             if failed_msg.retries > pyas2init.gsettings['max_retries']:
