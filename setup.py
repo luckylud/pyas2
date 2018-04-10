@@ -16,6 +16,13 @@ setup(
     scripts=[
         'scripts/pyas2-receiver.py',
         'scripts/pyas2-webserver.py',
+        'scripts/pyas2-daemon.py',
+        'scripts/pyas2-migrate.py',
+        'scripts/pyas2-retryfailedcoms.py',
+        'scripts/pyas2-sendas2message.py',
+        'scripts/pyas2-sendasyncmdn.py',
+        'scripts/pyas2-shell.py',
+        'scripts/pyas2-cleanas2server.py',
         ],
     license='GNU GPL v2.0',  # example license
     description='A pythonic AS2 application for file tranfers.',
