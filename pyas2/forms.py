@@ -1,6 +1,8 @@
-from pyas2 import models
+# -*- coding: utf-8 -*-
+
 from django import forms
-from pyas2 import viewlib
+
+from . import models, viewlib
 
 HIDDEN_INPUT = forms.widgets.HiddenInput
 
