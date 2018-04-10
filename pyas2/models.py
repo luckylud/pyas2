@@ -1,18 +1,25 @@
+# -*- coding: utf-8 -*-
 
 import os
+import subprocess
 from django.db import models
-from django.utils.translation import ugettext as _
-from django.db.models.signals import post_save
+from django.db.models.signals import post_save, post_delete
 from django.dispatch import receiver
+from django.utils.encoding import python_2_unicode_compatible
+from django.utils.translation import ugettext as _
+from email.parser import HeaderParser
+from string import Template
 
-from pyas2 import pyas2init, as2utils
+from . import pyas2init, as2utils
 
 
 # Initialize the pyas2 settings and loggers
 pyas2init.initialize()
 
 # Set default entry for selects
-DEFAULT_ENTRY = ('', "---------")
+DEFAULT_ENTRY = ('', '---------')
+
+MSG_ID_SEP = '#'
 
 
 # Set the storage directory for certificates
@@ -20,6 +27,7 @@ def get_certificate_path(instance, filename):
     return '/'.join((pyas2init.gsettings['media_uri'], 'certificates', filename))
 
 
+@python_2_unicode_compatible
 class PrivateCertificate(models.Model):
     certificate = models.FileField(
         max_length=500, upload_to=get_certificate_path)
@@ -32,6 +40,7 @@ class PrivateCertificate(models.Model):
         return os.path.basename(self.certificate.name)
 
 
+@python_2_unicode_compatible
 class PublicCertificate(models.Model):
     certificate = models.FileField(
         max_length=500, upload_to=get_certificate_path)
@@ -46,6 +55,7 @@ class PublicCertificate(models.Model):
         return os.path.basename(self.certificate.name)
 
 
+@python_2_unicode_compatible
 class Organization(models.Model):
     name = models.CharField(verbose_name=_('Organization Name'), max_length=100)
     as2_name = models.CharField(verbose_name=_('AS2 Identifier'), max_length=100, primary_key=True)
@@ -60,10 +70,14 @@ class Organization(models.Model):
         help_text=_('Use this field to send a customized message in the MDN Confirmations for this Organization')
     )
 
+    class Meta:
+        ordering = ['name']
+
     def __str__(self):
         return self.name
 
 
+@python_2_unicode_compatible
 class Partner(models.Model):
     CONTENT_TYPE_CHOICES = (
         ('application/EDI-X12', 'application/EDI-X12'),
@@ -80,7 +94,11 @@ class Partner(models.Model):
         ('rc2_40_cbc', 'RC2-40'),
     )
     SIGN_ALG_CHOICES = (
+        # ('md5', 'MD5'),
         ('sha1', 'SHA-1'),
+        # ('sha256', 'SHA-256'),
+        # ('sha384', 'SHA-384'),
+        # ('sha512', 'SHA-512'),
     )
     MDN_TYPE_CHOICES = (
         ('SYNC', 'Synchronous'),
@@ -107,10 +125,10 @@ class Partner(models.Model):
     content_type = models.CharField(max_length=100, choices=CONTENT_TYPE_CHOICES, default='application/edi-consent')
     compress = models.BooleanField(verbose_name=_('Compress Message'), default=True)
     encryption = models.CharField(max_length=20, verbose_name=_('Encrypt Message'), choices=ENCRYPT_ALG_CHOICES,
-        null=True, blank=True)
+                                  null=True, blank=True)
     encryption_key = models.ForeignKey(PublicCertificate, related_name='enc_partner', null=True, blank=True)
     signature = models.CharField(max_length=20, verbose_name=_('Sign Message'), choices=SIGN_ALG_CHOICES, null=True,
-        blank=True)
+                                 blank=True)
     signature_key = models.ForeignKey(PublicCertificate, related_name='sign_partner', null=True, blank=True)
     mdn = models.BooleanField(verbose_name=_('Request MDN'), default=False)
     mdn_mode = models.CharField(max_length=20, choices=MDN_TYPE_CHOICES, null=True, blank=True)
@@ -140,10 +158,14 @@ class Partner(models.Model):
             '$sender, $recevier, $messageid and any message header such as $Subject')
     )
 
+    class Meta:
+        ordering = ['name']
+
     def __str__(self):
         return self.name
 
 
+@python_2_unicode_compatible
 class Message(models.Model):
     DIRECTION_CHOICES = (
         ('IN', _('Inbound')),
@@ -161,7 +183,6 @@ class Message(models.Model):
         ('SYNC', _('Synchronous')),
         ('ASYNC', _('Asynchronous')),
     )
-    # TODO: Create composite key (message_id, organization, partner)
     message_id = models.CharField(max_length=100, primary_key=True)
     headers = models.TextField(null=True)
     direction = models.CharField(max_length=5, choices=DIRECTION_CHOICES)
@@ -178,12 +199,77 @@ class Message(models.Model):
     mdn = models.OneToOneField('MDN', null=True, related_name='omessage')
     mic = models.CharField(max_length=100, null=True)
     mdn_mode = models.CharField(max_length=5, choices=MODE_CHOICES, null=True)
-    retries = models.IntegerField(null=True)
+    retries = models.IntegerField(default=0)
+
+    class Meta:
+        ordering = ['-timestamp']
 
     def __str__(self):
         return self.message_id
 
+    def msg_id(self):
+        return self.message_id.split(MSG_ID_SEP)[0]
 
+    def _parse_cmd(self, cmd):
+        """Create command from template, replace variables in the command"""
+        variables = {
+            'filename': self.payload.name,
+            'fullfilename': self.full_filename,
+            'sender': self.organization.as2_name,
+            'recevier': self.partner.as2_name,
+            'messageid': self.msg_id()
+        }
+        variables.update(dict(HeaderParser().parsestr(self.headers).items()))
+        return Template(cmd).safe_substitute(variables)
+
+    def run_post_send(self, *args, **kwargs):
+        """Execute command after successful send, can be used to notify successful sends"""
+        if self.partner.cmd_send:
+            command = self._parse_cmd(self.partner.cmd_send)
+            info = '%s "%s"' % (_('Executing post send command:'), command)
+            pyas2init.logger.info(info)
+            Log.objects.create(message=self, status='S', text=info)
+            subprocess.Popen(command.split(' '))
+
+    def run_post_receive(self, *args, **kwargs):
+        """Execute command after successful receive, can be used to call the edi program for further processing"""
+        if self.partner.cmd_receive:
+            command = self._parse_cmd(self.partner.cmd_receive)
+            info = '%s "%s"' % (_('Executing post receive command:'), command)
+            pyas2init.logger.info(info)
+            Log.objects.create(message=self, status='S', text=info)
+            subprocess.Popen(command.split(' '))
+
+    def save(self, *args, **kwargs):
+        full_filename = kwargs.pop('full_filename', '')
+        if not self.timestamp and self.direction == 'IN':
+            # Create composite key (message_id, organization, partner)
+            if self.organization and self.organization.as2_name:
+                self.message_id += MSG_ID_SEP + self.organization.as2_name
+                if self.partner and self.partner.as2_name:
+                    self.message_id += MSG_ID_SEP + self.partner.as2_name
+
+        if self.timestamp and self.status == 'S':
+            this = Message.objects.get(pk=self.pk)
+            ######################################
+            # Run post receive/send command
+            # message need to be saved like this:
+            # message.save(full_filename='/path/to/file')
+            # path to message to file $fullfilename
+            ######################################
+            if this.status != self.status:
+                pyas2init.logger.debug('full_filename passed to save: %s' % full_filename)
+                self.full_filename = full_filename
+                # Run post receive
+                if self.direction == 'IN' and self.partner.cmd_receive:
+                    self.run_post_receive()
+                # Run post send
+                elif self.direction == 'OUT' and self.partner.cmd_send:
+                    self.run_post_send()
+        super(Message, self).save(*args, **kwargs)
+
+
+@python_2_unicode_compatible
 class Payload(models.Model):
     name = models.CharField(max_length=100)
     content_type = models.CharField(max_length=255)
@@ -193,6 +279,7 @@ class Payload(models.Model):
         return self.name
 
 
+@python_2_unicode_compatible
 class Log(models.Model):
     STATUS_CHOICES = (
         ('S', _('Success')),
@@ -204,12 +291,20 @@ class Log(models.Model):
     message = models.ForeignKey(Message, related_name='logs')
     text = models.CharField(max_length=255)
 
+    class Meta:
+        ordering = ['-timestamp']
 
+    def __str__(self):
+        return '%s_%s_%s' % (self.message.direction, self.message, self.status)
+
+
+@python_2_unicode_compatible
 class MDN(models.Model):
     STATUS_CHOICES = (
         ('S', _('Sent')),
         ('R', _('Received')),
         ('P', _('Pending')),
+        ('E', _('Error')),  # Pending go to Error after max retry
     )
     message_id = models.CharField(max_length=100, primary_key=True)
     timestamp = models.DateTimeField(auto_now_add=True)
@@ -218,6 +313,10 @@ class MDN(models.Model):
     headers = models.TextField(null=True)
     return_url = models.URLField(null=True)
     signed = models.BooleanField(default=False)
+    retries = models.IntegerField(default=0)
+
+    class Meta:
+        ordering = ['-timestamp']
 
     def __str__(self):
         return self.message_id
@@ -230,6 +329,13 @@ def getorganizations():
 
 def getpartners():
     return [DEFAULT_ENTRY] + [(l, '%s (%s)' % (l, n)) for (l, n) in Partner.objects.values_list('as2_name', 'name')]
+
+
+@receiver(post_delete, sender=Message)
+def post_delete_message(sender, instance, *args, **kwargs):
+    """ Delete related mdn """
+    if instance.mdn:
+        instance.mdn.delete()
 
 
 @receiver(post_save, sender=Organization)
