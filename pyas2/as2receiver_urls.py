@@ -10,7 +10,7 @@ or
 """
 from django.conf.urls import url
 
-from pyas2.views import as2receive
+from .views import as2receive
 
 
 urlpatterns = [

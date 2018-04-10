@@ -5,7 +5,7 @@ from django.contrib import admin
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth import views as auth_views
 
-from pyas2 import views, urls as pyas2_urls
+from . import views, urls as pyas2_urls
 
 admin.autodiscover()
 
