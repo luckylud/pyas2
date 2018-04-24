@@ -69,12 +69,12 @@ def Pyas2settingsModname():
 
 def pyas2setup(pyas2server):
     if pyas2server in ['receiver', 'daemon', 'process']:
-        os.environ.setdefault("DJANGO_SETTINGS_MODULE", "pyas2.as2receiver_settings")
+        os.environ.setdefault("DJANGO_SETTINGS_MODULE", "pyas2.receiver.settings")
     elif pyas2server == 'test':
-        os.environ.setdefault("DJANGO_SETTINGS_MODULE", "pyas2.test_settings")
+        os.environ.setdefault("DJANGO_SETTINGS_MODULE", "pyas2.tests.settings")
     elif not os.environ.get('DJANGO_SETTINGS_MODULE'):
         if pyas2server == 'webserver':
-            os.environ.setdefault("DJANGO_SETTINGS_MODULE", "pyas2.webserver_settings")
+            os.environ.setdefault("DJANGO_SETTINGS_MODULE", "pyas2.webserver.settings")
         else:
             try:
                 dj_settings = __import__(pyas2server)

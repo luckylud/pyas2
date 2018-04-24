@@ -3,9 +3,9 @@ Django settings for pyas2 receiver.
 
 """
 
-ROOT_URLCONF = 'pyas2.as2receiver_urls'
+ROOT_URLCONF = 'pyas2.receiver.urls'
 
-WSGI_APPLICATION = 'pyas2.as2receiver_wsgi.application'
+# WSGI_APPLICATION = 'pyas2.receiver.wsgi.application'
 
 # Application definition
 INSTALLED_APPS = [
@@ -39,4 +39,3 @@ if hasattr(pyas2settings, 'DATABASE_ROUTERS'):
 PYAS2['SERVER'] = 'receiver'
 
 ALLOWED_HOSTS = AS2_ALLOWED_HOSTS
-

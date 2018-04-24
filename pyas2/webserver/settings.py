@@ -2,11 +2,13 @@
 Django settings for pyas2 webserver
 """
 import os
-import sys
+import pyas2
 
-ROOT_URLCONF = 'pyas2.webserver_urls'
+PYAS2_PATH = os.path.abspath(os.path.dirname(pyas2.__file__))
 
-WSGI_APPLICATION = 'pyas2.webserver_wsgi.application'
+ROOT_URLCONF = 'pyas2.webserver.urls'
+
+WSGI_APPLICATION = 'pyas2.webserver.wsgi.application'
 
 # Application definition
 INSTALLED_APPS = [
@@ -33,9 +35,7 @@ TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
         'DIRS': [
-            os.path.join(
-                os.path.dirname(__file__), 
-                'templates'),
+            os.path.join(PYAS2_PATH, 'templates'),
             ],
         'APP_DIRS': True,
         'OPTIONS': {
@@ -44,7 +44,7 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
-                #'pyas2.templatetags.pyas2_extras',
+                # 'pyas2.templatetags.pyas2_extras',
             ],
         },
     },

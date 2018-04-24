@@ -12,7 +12,9 @@ https://docs.djangoproject.com/en/1.9/ref/settings/
 
 import os
 import tempfile
+import pyas2
 
+PYAS2_PATH = os.path.abspath(os.path.dirname(pyas2.__file__))
 
 # Build temporary test folder
 PYAS2_ROOT = tempfile.mkdtemp('', 'pyas2')
@@ -28,9 +30,7 @@ DEBUG = True
 
 ALLOWED_HOSTS = []
 
-
 # Application definition
-
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
@@ -57,7 +57,9 @@ ROOT_URLCONF = 'pyas2.tests.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [
+            os.path.join(PYAS2_PATH, 'templates'),
+            ],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
