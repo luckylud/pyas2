@@ -11,10 +11,11 @@ https://docs.djangoproject.com/en/1.9/ref/settings/
 """
 
 import os
+import tempfile
 
-# Build paths inside the project like this: os.path.join(BASE_DIR, ...)
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
+# Build temporary test folder
+PYAS2_ROOT = tempfile.mkdtemp('', 'pyas2')
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/1.9/howto/deployment/checklist/
@@ -31,13 +32,13 @@ ALLOWED_HOSTS = []
 # Application definition
 
 INSTALLED_APPS = [
-    'pyas2',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'pyas2',
 ]
 
 MIDDLEWARE_CLASSES = [
@@ -76,7 +77,7 @@ TEMPLATES = [
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
+        'NAME': os.path.join(PYAS2_ROOT, 'db.sqlite3'),
     }
 }
 
@@ -120,7 +121,13 @@ USE_TZ = True
 STATIC_URL = '/static/'
 
 PYAS2 = {
+    'DATADIR': PYAS2_ROOT,
     'ENVIRONMENT': 'production',
+    'MEDIAURI': 'pyas2',
+    # As2 receiver ###
+    'AS2HOST': 'localhost',  # set WAN IP or domaine hostname
+    'AS2PORT': 8080,
+    'AS2URI': '/pyas2/as2receive',
     'PORT': 8080,
     'ENVIRONMENTTEXT': 'BETA',
     'ENVIRONMENTTEXTCOLOR': 'Yellow',
@@ -128,7 +135,8 @@ PYAS2 = {
     'LOGCONSOLE': True,
     'LOGCONSOLELEVEL': 'INFO',
     'MAXRETRIES': 5,
-    'MDNURL': 'https://127.0.0.1:8080/pyas2/as2receive',
+    # 'MDNURL': 'http://127.0.0.1:8080/pyas2/as2receive',
     'ASYNCMDNWAIT': 30,
     'MAXARCHDAYS': 30,
 }
+MEDIA_ROOT = os.path.join(PYAS2['DATADIR'], 'media')

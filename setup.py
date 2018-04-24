@@ -22,6 +22,7 @@ setup(
         'scripts/pyas2-sendas2message.py',
         'scripts/pyas2-sendasyncmdn.py',
         'scripts/pyas2-shell.py',
+        'scripts/pyas2-test.py',
         'scripts/pyas2-cleanas2server.py',
         ],
     license='GNU GPL v2.0',  # example license

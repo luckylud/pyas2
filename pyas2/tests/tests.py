@@ -1,14 +1,23 @@
+import os
+from django.core.files import File
 from django.test import TestCase, Client
-from pyas2 import models
-from pyas2 import as2lib
 from email import utils as emailutils
 from email.parser import HeaderParser
 from email import message_from_string
 from itertools import izip
-import os
+import shutil
 
-TEST_DIR = os.path.join((os.path.dirname(
+from pyas2 import models, pyas2init, as2lib
+
+
+FIXTURES_DIR = os.path.join((os.path.dirname(
     os.path.abspath(__file__))),  'fixtures')
+TEST_DIR = os.path.join(pyas2init.gsettings.get('root_dir'), 'test')
+if not os.path.isdir(TEST_DIR):
+    os.mkdir(TEST_DIR)
+for f in ['testmessage.edi', 'si_signed_cmp.msg', 'si_signed.mdn']:
+    shutil.copyfile(os.path.join(FIXTURES_DIR, f),
+                    os.path.join(TEST_DIR, f))
 
 
 class AS2SendReceiveTest(TestCase):
@@ -22,20 +31,27 @@ class AS2SendReceiveTest(TestCase):
         cls.header_parser = HeaderParser()
 
         # Load the client and server certificates
-        cls.server_key = models.PrivateCertificate.objects.create(
-            certificate=os.path.join(TEST_DIR, 'as2server.pem'),
-            certificate_passphrase='password'
-        )
-        cls.server_crt = models.PublicCertificate.objects.create(
-            certificate=os.path.join(TEST_DIR, 'as2server.crt')
-        )
-        cls.client_key = models.PrivateCertificate.objects.create(
-            certificate=os.path.join(TEST_DIR, 'as2client.pem'),
-            certificate_passphrase='password'
-        )
-        cls.client_crt = models.PublicCertificate.objects.create(
-            certificate=os.path.join(TEST_DIR, 'as2client.crt')
-        )
+        cls.server_key = models.PrivateCertificate()
+        cls.server_key.certificate.save('as2server.pem',
+                                        File(open(os.path.join(FIXTURES_DIR, 'as2server.pem'), 'r')))
+        cls.server_key.certificate_passphrase = 'password'
+        cls.server_key.save()
+
+        cls.server_crt = models.PublicCertificate()
+        cls.server_crt.certificate.save('as2server.crt',
+                                        File(open(os.path.join(FIXTURES_DIR, 'as2server.crt'), 'r')))
+        cls.server_crt.save()
+
+        cls.client_key = models.PrivateCertificate()
+        cls.client_key.certificate.save('as2client.pem',
+                                        File(open(os.path.join(FIXTURES_DIR, 'as2client.pem'), 'r')))
+        cls.client_key.certificate_passphrase = 'password'
+        cls.client_key.save()
+
+        cls.client_crt = models.PublicCertificate()
+        cls.client_crt.certificate.save('as2client.crt',
+                                        File(open(os.path.join(FIXTURES_DIR, 'as2client.crt'), 'r')))
+        cls.client_crt.save()
 
         # Setup the server organization and partner
         models.Organization.objects.create(
@@ -47,7 +63,7 @@ class AS2SendReceiveTest(TestCase):
         models.Partner.objects.create(
             name='Server Partner',
             as2_name='as2client',
-            target_url='http://localhost:8080/pyas2/as2receive',
+            target_url=pyas2init.gsettings['mdn_url'],
             compress=False,
             mdn=False,
             signature_key=cls.client_crt,
@@ -72,7 +88,7 @@ class AS2SendReceiveTest(TestCase):
     def testEndpoint(self):
         """ Test if the as2 reveive endpoint is active """
 
-        response = self.client.get('/pyas2/as2receive')
+        response = self.client.get(pyas2init.gsettings.get('as2_uri', '/pyas2/as2receive'))
         self.assertEqual(response.status_code, 200)
 
     def testNoEncryptMessageNoMdn(self):
@@ -81,7 +97,7 @@ class AS2SendReceiveTest(TestCase):
         # Create the partner with appropriate settings for this case
         partner = models.Partner.objects.create(name='Client Partner',
                                                 as2_name='as2server',
-                                                target_url='http://localhost:8080/pyas2/as2receive',
+                                                target_url=pyas2init.gsettings['mdn_url'],
                                                 compress=False,
                                                 mdn=False)
 
@@ -93,7 +109,7 @@ class AS2SendReceiveTest(TestCase):
         self.assertEqual(response.status_code, 200)
 
         # Check if message was processed successfully
-        out_message = models.Message.objects.get(message_id=message_id)
+        out_message = models.Message.objects.get(message_id__startswith=message_id, direction='IN')
         self.assertEqual(out_message.status, 'S')
 
         # Check if input and output files are the same
@@ -105,7 +121,7 @@ class AS2SendReceiveTest(TestCase):
         # Create the partner with appropriate settings for this case
         partner = models.Partner.objects.create(name='Client Partner',
                                                 as2_name='as2server',
-                                                target_url='http://localhost:8080/pyas2/as2receive',
+                                                target_url=pyas2init.gsettings['mdn_url'],
                                                 compress=False,
                                                 mdn=True)
 
@@ -117,7 +133,7 @@ class AS2SendReceiveTest(TestCase):
         self.assertEqual(response.status_code, 200)
 
         # Check if message was processed successfully
-        out_message = models.Message.objects.get(message_id=message_id)
+        out_message = models.Message.objects.get(message_id__startswith=message_id, direction='IN')
         self.assertEqual(out_message.status, 'S')
 
         # Process the MDN for the in message and check status
@@ -133,7 +149,7 @@ class AS2SendReceiveTest(TestCase):
         # Create the partner with appropriate settings for this case
         partner = models.Partner.objects.create(name='Client Partner',
                                                 as2_name='as2server',
-                                                target_url='http://localhost:8080/pyas2/as2receive',
+                                                target_url=pyas2init.gsettings['mdn_url'],
                                                 compress=False,
                                                 mdn=True,
                                                 mdn_mode='SYNC',
@@ -148,7 +164,7 @@ class AS2SendReceiveTest(TestCase):
         self.assertEqual(response.status_code, 200)
 
         # Check if message was processed successfully
-        out_message = models.Message.objects.get(message_id=message_id)
+        out_message = models.Message.objects.get(message_id__startswith=message_id, direction='IN')
         # AS2SendReceiveTest.printLogs(out_message)
         self.assertEqual(out_message.status, 'S')
 
@@ -166,7 +182,7 @@ class AS2SendReceiveTest(TestCase):
         # Create the partner with appropriate settings for this case
         partner = models.Partner.objects.create(name='Client Partner',
                                                 as2_name='as2server',
-                                                target_url='http://localhost:8080/pyas2/as2receive',
+                                                target_url=pyas2init.gsettings['mdn_url'],
                                                 compress=False,
                                                 encryption='des_ede3_cbc',
                                                 encryption_key=self.server_crt,
@@ -180,7 +196,7 @@ class AS2SendReceiveTest(TestCase):
         self.assertEqual(response.status_code, 200)
 
         # Check if message was processed successfully
-        out_message = models.Message.objects.get(message_id=message_id)
+        out_message = models.Message.objects.get(message_id__startswith=message_id, direction='IN')
         self.assertEqual(out_message.status, 'S')
 
         # Check if input and output files are the same
@@ -193,7 +209,7 @@ class AS2SendReceiveTest(TestCase):
         # Create the partner with appropriate settings for this case
         partner = models.Partner.objects.create(name='Client Partner',
                                                 as2_name='as2server',
-                                                target_url='http://localhost:8080/pyas2/as2receive',
+                                                target_url=pyas2init.gsettings['mdn_url'],
                                                 compress=False,
                                                 encryption='des_ede3_cbc',
                                                 encryption_key=self.server_crt,
@@ -207,7 +223,7 @@ class AS2SendReceiveTest(TestCase):
         self.assertEqual(response.status_code, 200)
 
         # Check if message was processed successfully
-        out_message = models.Message.objects.get(message_id=message_id)
+        out_message = models.Message.objects.get(message_id__startswith=message_id, direction='IN')
         # AS2SendReceiveTest.printLogs(out_message)
         self.assertEqual(out_message.status, 'S')
 
@@ -225,7 +241,7 @@ class AS2SendReceiveTest(TestCase):
         # Create the partner with appropriate settings for this case
         partner = models.Partner.objects.create(name='Client Partner',
                                                 as2_name='as2server',
-                                                target_url='http://localhost:8080/pyas2/as2receive',
+                                                target_url=pyas2init.gsettings['mdn_url'],
                                                 compress=False,
                                                 encryption='des_ede3_cbc',
                                                 encryption_key=self.server_crt,
@@ -242,7 +258,7 @@ class AS2SendReceiveTest(TestCase):
         self.assertEqual(response.status_code, 200)
 
         # Check if message was processed successfully
-        out_message = models.Message.objects.get(message_id=message_id)
+        out_message = models.Message.objects.get(message_id__startswith=message_id, direction='IN')
         # AS2SendReceiveTest.printLogs(out_message)
         self.assertEqual(out_message.status, 'S')
 
@@ -260,7 +276,7 @@ class AS2SendReceiveTest(TestCase):
         # Create the partner with appropriate settings for this case
         partner = models.Partner.objects.create(name='Client Partner',
                                                 as2_name='as2server',
-                                                target_url='http://localhost:8080/pyas2/as2receive',
+                                                target_url=pyas2init.gsettings['mdn_url'],
                                                 compress=False,
                                                 signature='sha1',
                                                 signature_key=self.server_crt,
@@ -274,7 +290,7 @@ class AS2SendReceiveTest(TestCase):
         self.assertEqual(response.status_code, 200)
 
         # Check if message was processed successfully
-        out_message = models.Message.objects.get(message_id=message_id)
+        out_message = models.Message.objects.get(message_id__startswith=message_id, direction='IN')
         # AS2SendReceiveTest.printLogs(out_message)
         self.assertEqual(out_message.status, 'S')
 
@@ -287,7 +303,7 @@ class AS2SendReceiveTest(TestCase):
         # Create the partner with appropriate settings for this case
         partner = models.Partner.objects.create(name='Client Partner',
                                                 as2_name='as2server',
-                                                target_url='http://localhost:8080/pyas2/as2receive',
+                                                target_url=pyas2init.gsettings['mdn_url'],
                                                 compress=False,
                                                 signature='sha1',
                                                 signature_key=self.server_crt,
@@ -301,7 +317,7 @@ class AS2SendReceiveTest(TestCase):
         self.assertEqual(response.status_code, 200)
 
         # Check if message was processed successfully
-        out_message = models.Message.objects.get(message_id=message_id)
+        out_message = models.Message.objects.get(message_id__startswith=message_id, direction='IN')
         # AS2SendReceiveTest.printLogs(out_message)
         self.assertEqual(out_message.status, 'S')
 
@@ -319,7 +335,7 @@ class AS2SendReceiveTest(TestCase):
         # Create the partner with appropriate settings for this case
         partner = models.Partner.objects.create(name='Client Partner',
                                                 as2_name='as2server',
-                                                target_url='http://localhost:8080/pyas2/as2receive',
+                                                target_url=pyas2init.gsettings['mdn_url'],
                                                 compress=False,
                                                 signature='sha1',
                                                 signature_key=self.server_crt,
@@ -334,7 +350,7 @@ class AS2SendReceiveTest(TestCase):
         self.assertEqual(response.status_code, 200)
 
         # Check if message was processed successfully
-        out_message = models.Message.objects.get(message_id=message_id)
+        out_message = models.Message.objects.get(message_id__startswith=message_id, direction='IN')
         # AS2SendReceiveTest.printLogs(out_message)
         self.assertEqual(out_message.status, 'S')
 
@@ -352,7 +368,7 @@ class AS2SendReceiveTest(TestCase):
         # Create the partner with appropriate settings for this case
         partner = models.Partner.objects.create(name='Client Partner',
                                                 as2_name='as2server',
-                                                target_url='http://localhost:8080/pyas2/as2receive',
+                                                target_url=pyas2init.gsettings['mdn_url'],
                                                 compress=False,
                                                 signature='sha1',
                                                 signature_key=self.server_crt,
@@ -368,7 +384,7 @@ class AS2SendReceiveTest(TestCase):
         self.assertEqual(response.status_code, 200)
 
         # Check if message was processed successfully
-        out_message = models.Message.objects.get(message_id=message_id)
+        out_message = models.Message.objects.get(message_id__startswith=message_id, direction='IN')
         # AS2SendReceiveTest.printLogs(out_message)
         self.assertEqual(out_message.status, 'S')
 
@@ -381,7 +397,7 @@ class AS2SendReceiveTest(TestCase):
         # Create the partner with appropriate settings for this case
         partner = models.Partner.objects.create(name='Client Partner',
                                                 as2_name='as2server',
-                                                target_url='http://localhost:8080/pyas2/as2receive',
+                                                target_url=pyas2init.gsettings['mdn_url'],
                                                 compress=False,
                                                 encryption='des_ede3_cbc',
                                                 encryption_key=self.server_crt,
@@ -397,7 +413,7 @@ class AS2SendReceiveTest(TestCase):
         self.assertEqual(response.status_code, 200)
 
         # Check if message was processed successfully
-        out_message = models.Message.objects.get(message_id=message_id)
+        out_message = models.Message.objects.get(message_id__startswith=message_id, direction='IN')
         # AS2SendReceiveTest.printLogs(out_message)
         self.assertEqual(out_message.status, 'S')
 
@@ -415,7 +431,7 @@ class AS2SendReceiveTest(TestCase):
         # Create the partner with appropriate settings for this case
         partner = models.Partner.objects.create(name='Client Partner',
                                                 as2_name='as2server',
-                                                target_url='http://localhost:8080/pyas2/as2receive',
+                                                target_url=pyas2init.gsettings['mdn_url'],
                                                 compress=False,
                                                 encryption='des_ede3_cbc',
                                                 encryption_key=self.server_crt,
@@ -432,7 +448,7 @@ class AS2SendReceiveTest(TestCase):
         self.assertEqual(response.status_code, 200)
 
         # Check if message was processed successfully
-        out_message = models.Message.objects.get(message_id=message_id)
+        out_message = models.Message.objects.get(message_id__startswith=message_id, direction='IN')
         # AS2SendReceiveTest.printLogs(out_message)
         self.assertEqual(out_message.status, 'S')
 
@@ -450,7 +466,7 @@ class AS2SendReceiveTest(TestCase):
         # Create the partner with appropriate settings for this case
         partner = models.Partner.objects.create(name='Client Partner',
                                                 as2_name='as2server',
-                                                target_url='http://localhost:8080/pyas2/as2receive',
+                                                target_url=pyas2init.gsettings['mdn_url'],
                                                 compress=True,
                                                 encryption='des_ede3_cbc',
                                                 encryption_key=self.server_crt,
@@ -467,7 +483,7 @@ class AS2SendReceiveTest(TestCase):
         self.assertEqual(response.status_code, 200)
 
         # Check if message was processed successfully
-        out_message = models.Message.objects.get(message_id=message_id)
+        out_message = models.Message.objects.get(message_id__startswith=message_id, direction='IN')
         # AS2SendReceiveTest.printLogs(out_message)
         self.assertEqual(out_message.status, 'S')
 
@@ -485,7 +501,7 @@ class AS2SendReceiveTest(TestCase):
         # Create the partner with appropriate settings for this case
         partner = models.Partner.objects.create(name='Client Partner',
                                                 as2_name='as2server',
-                                                target_url='http://localhost:8080/pyas2/as2receive',
+                                                target_url=pyas2init.gsettings['mdn_url'],
                                                 compress=False,
                                                 encryption='des_ede3_cbc',
                                                 encryption_key=self.server_crt,
@@ -494,50 +510,68 @@ class AS2SendReceiveTest(TestCase):
                                                 mdn=True,
                                                 mdn_mode='ASYNC',
                                                 mdn_sign='sha1')
+        self.run_async_test(partner)
 
+
+    def testEncryptSignMessageAsyncMdn(self):
+        """ Test Permutation 15: Sender sends encrypted and signed data and requests an Asynchronous receipt. """
+
+        # Create the partner with appropriate settings for this case
+        partner = models.Partner.objects.create(name='Client Partner',
+                                                as2_name='as2server',
+                                                target_url=pyas2init.gsettings['mdn_url'],
+                                                compress=False,
+                                                encryption='des_ede3_cbc',
+                                                encryption_key=self.server_crt,
+                                                signature='sha1',
+                                                signature_key=self.server_crt,
+                                                mdn=True,
+                                                mdn_mode='ASYNC',
+                                                mdn_sign='')
+        self.run_async_test(partner)
+
+
+    def run_async_test(self, partner):
         # Setup the message object and build the message, do not send it
         message_id = emailutils.make_msgid().strip('<>')
         in_message, response = self.buildSendMessage(message_id, partner)
+        pyas2init.logger.info('Message created: %s' % in_message)
+        # AS2SendReceiveTest.printLogs(in_message)
 
         # Check if message was processed successfully
-        out_message = models.Message.objects.get(message_id=message_id)
-        # AS2SendReceiveTest.printLogs(in_message)
+        out_message = models.Message.objects.get(message_id__startswith=message_id, direction='IN')
+        pyas2init.logger.info('Message received: %s' % out_message)
+        # AS2SendReceiveTest.printLogs(out_message)
         self.assertEqual(out_message.status, 'S')
 
         # Check if input and output files are the same
         self.assertTrue(AS2SendReceiveTest.compareFiles(self.payload.file, out_message.payload.file))
 
         # Process the ASYNC MDN for the in message and check status
-        message_headers = self.header_parser.parsestr(out_message.mdn.headers)
         http_headers = {}
-        for header in message_headers.keys():
+        for header, value in out_message.mdn._headers().items():
             key = 'HTTP_%s' % header.replace('-', '_').upper()
-            http_headers[key] = message_headers[header]
+            http_headers[key] = value
+
         with open(out_message.mdn.file, 'rb') as mdn_file:
             mdn_content = mdn_file.read()
 
-        # Switch the out and in messages, this is to prevent duplicate message from being picked
-        out_message.delete()
-        in_message.pk = message_id
-        in_message.payload = None
-        in_message.save()
-
         # Send the async mdn and check for its status
         content_type = http_headers.pop('HTTP_CONTENT_TYPE')
-        response = self.client.post('/pyas2/as2receive',
+        response = self.client.post(pyas2init.gsettings.get('as2_uri', '/pyas2/as2receive'),
                                     data=mdn_content,
                                     content_type=content_type,
                                     **http_headers)
         self.assertEqual(response.status_code, 200)
 
-        in_message = models.Message.objects.get(message_id=message_id)
+        in_message = models.Message.objects.get(message_id__startswith=message_id, direction='OUT')
         # AS2SendReceiveTest.printLogs(in_message)
         self.assertEqual(in_message.status, 'S')
 
     def buildSendMessage(self, message_id, partner):
         """ Function builds the message and posts the request. """
 
-        message = models.Message.objects.create(message_id='%s_IN' % message_id,
+        message = models.Message.objects.create(message_id=message_id,
                                                 partner=partner,
                                                 organization=self.organization,
                                                 direction='OUT',
@@ -546,15 +580,14 @@ class AS2SendReceiveTest(TestCase):
         processed_payload = as2lib.build_message(message)
 
         # Set up the Http headers for the request
-        message_headers = self.header_parser.parsestr(message.headers)
         http_headers = {}
-        for header in message_headers.keys():
+        for header, value in message._headers().items():
             key = 'HTTP_%s' % header.replace('-', '_').upper()
-            http_headers[key] = message_headers[header]
+            http_headers[key] = value
         http_headers['HTTP_MESSAGE_ID'] = message_id
         content_type = http_headers.pop('HTTP_CONTENT_TYPE')
         # Post the request and return the response
-        response = self.client.post('/pyas2/as2receive',
+        response = self.client.post(pyas2init.gsettings.get('as2_uri', '/pyas2/as2receive'),
                                     data=processed_payload,
                                     content_type=content_type,
                                     **http_headers)
@@ -593,15 +626,19 @@ class AS2SterlingIntegratorTest(TestCase):
         cls.header_parser = HeaderParser()
 
         # Load the client and server certificates
-        cls.server_key = models.PrivateCertificate.objects.create(
-            certificate=os.path.join(TEST_DIR, 'as2server.pem'),
-            certificate_passphrase='password'
-        )
-        cls.si_public_key = models.PublicCertificate.objects.create(
-            certificate=os.path.join(TEST_DIR, 'si_public_key.crt'),
-            ca_cert=os.path.join(TEST_DIR, 'si_public_key.ca'),
-            verify_cert=False
-        )
+        cls.server_key = models.PrivateCertificate()
+        cls.server_key.certificate.save('as2server.pem',
+                                        File(open(os.path.join(FIXTURES_DIR, 'as2server.pem'), 'r')))
+        cls.server_key.certificate_passphrase = 'password'
+        cls.server_key.save()
+
+        cls.si_public_key = models.PublicCertificate()
+        cls.si_public_key.certificate.save('si_public_key.crt',
+                                        File(open(os.path.join(FIXTURES_DIR, 'si_public_key.crt'), 'r')))
+        cls.si_public_key.ca_cert.save('si_public_key.ca',
+                                        File(open(os.path.join(FIXTURES_DIR, 'si_public_key.ca'), 'r')))
+        cls.si_public_key.verify_cert = False
+        cls.si_public_key.save()
 
         # Setup the server organization and partner
         cls.organization = models.Organization.objects.create(
@@ -614,7 +651,7 @@ class AS2SterlingIntegratorTest(TestCase):
         cls.partner = models.Partner.objects.create(
             name='Sterling B2B Integrator',
             as2_name='SIAS2PRD',
-            target_url='http://localhost:8080/pyas2/as2receive',
+            target_url=pyas2init.gsettings['mdn_url'],
             compress=False,
             mdn=False,
             signature_key=cls.si_public_key,
@@ -636,7 +673,8 @@ class AS2SterlingIntegratorTest(TestCase):
                 message_id=payload.get('message-id').strip('<>'),
                 direction='IN',
                 status='IP',
-                headers=''
+                headers='as2-from: %s\nas2-to: %s\n' % (payload.get('as2-from'),
+                                                        payload.get('as2-to'))
             )
             as2lib.save_message(message, payload, raw_payload)
 
