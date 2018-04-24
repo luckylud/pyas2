@@ -512,7 +512,6 @@ class AS2SendReceiveTest(TestCase):
                                                 mdn_sign='sha1')
         self.run_async_test(partner)
 
-
     def testEncryptSignMessageAsyncMdn(self):
         """ Test Permutation 15: Sender sends encrypted and signed data and requests an Asynchronous receipt. """
 
@@ -529,7 +528,6 @@ class AS2SendReceiveTest(TestCase):
                                                 mdn_mode='ASYNC',
                                                 mdn_sign='')
         self.run_async_test(partner)
-
 
     def run_async_test(self, partner):
         # Setup the message object and build the message, do not send it
@@ -605,7 +603,7 @@ class AS2SendReceiveTest(TestCase):
     def printLogs(message):
         logs = models.Log.objects.filter(message=message)
         for log in logs:
-            print (log.status, log.text)
+            print(log.status, log.text)
 
     @staticmethod
     def compareFiles(filename1, filename2):
@@ -634,9 +632,9 @@ class AS2SterlingIntegratorTest(TestCase):
 
         cls.si_public_key = models.PublicCertificate()
         cls.si_public_key.certificate.save('si_public_key.crt',
-                                        File(open(os.path.join(FIXTURES_DIR, 'si_public_key.crt'), 'r')))
+                                           File(open(os.path.join(FIXTURES_DIR, 'si_public_key.crt'), 'r')))
         cls.si_public_key.ca_cert.save('si_public_key.ca',
-                                        File(open(os.path.join(FIXTURES_DIR, 'si_public_key.ca'), 'r')))
+                                       File(open(os.path.join(FIXTURES_DIR, 'si_public_key.ca'), 'r')))
         cls.si_public_key.verify_cert = False
         cls.si_public_key.save()
 
@@ -686,4 +684,3 @@ class AS2SterlingIntegratorTest(TestCase):
 
         with open(os.path.join(TEST_DIR, 'si_signed.mdn')) as mdn:
             as2lib.save_mdn(message, mdn.read())
-
