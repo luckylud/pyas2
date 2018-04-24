@@ -237,7 +237,7 @@ class SendMessage(View):
             pyas2init.logger.info(_('Send message started with parameters: "%(parameters)s"'),
                                   {'parameters': str(lijst)})
 
-            # execute the django admin command "sendas2message" to transfer the file to partner
+            # Call django management command "sendas2message" to transfer the file to partner
             messages.add_message(request, messages.INFO,
                                  _('Sending file %(file)s to partner %(partner)s ...' % {
                                      'file': f.name,
@@ -264,7 +264,7 @@ def resend_message(request, pk, *args, **kwargs):
     with open(orig_message.payload.file, 'rb+') as source:
         temp.write(source.read())
 
-    # execute django admin command "sendas2message" to transfer the file to partner
+    # Call django management command "sendas2message" to transfer the file to partner
     lijst = [
         'sendas2message',
         orig_message.organization.as2_name,
@@ -287,7 +287,7 @@ def resend_message(request, pk, *args, **kwargs):
 def send_async_mdn(request, *args, **kwargs):
     """Send all pending asynchronous MDNs to all partners"""
 
-    # execute django admin command "sendasyncmdn" to transfer the file to partner
+    # Call django management command "sendasyncmdn" to transfer the file to partner
     lijst = ['sendasyncmdn']
     pyas2init.logger.info(_(u'Send async MDNs started with parameters: "%(parameters)s"'), {'parameters': str(lijst)})
     try:
