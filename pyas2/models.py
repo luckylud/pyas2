@@ -210,6 +210,9 @@ class Message(models.Model):
     def msg_id(self):
         return self.message_id.split(MSG_ID_SEP)[0]
 
+    def _headers(self):
+        return dict(HeaderParser().parsestr(self.headers or '').items())
+
     def _parse_cmd(self, cmd):
         """Create command from template, replace variables in the command"""
         variables = {
@@ -219,7 +222,7 @@ class Message(models.Model):
             'recevier': self.partner.as2_name,
             'messageid': self.msg_id()
         }
-        variables.update(dict(HeaderParser().parsestr(self.headers).items()))
+        variables.update(self._headers())
         return Template(cmd).safe_substitute(variables)
 
     def run_post_send(self, *args, **kwargs):
@@ -243,8 +246,16 @@ class Message(models.Model):
     def save(self, *args, **kwargs):
         full_filename = kwargs.pop('full_filename', '')
         if not self.timestamp and self.direction == 'IN':
+            if not self.organization:
+                self.organization = Organization.objects.filter(as2_name=self._headers().get('as2-to')).first()
+            if not self.partner:
+                self.partner = Partner.objects.filter(as2_name=self._headers().get('as2-from')).first()
+            if not self.organization or not self.partner:
+                self.status = 'E'
+                self.message_id += MSG_ID_SEP + self._headers().get('as2-to', 'NONE')
+                self.message_id += MSG_ID_SEP + self._headers().get('as2-from', 'NONE')
             # Create composite key (message_id, organization, partner)
-            if self.organization and self.organization.as2_name:
+            elif self.organization and self.organization.as2_name:
                 self.message_id += MSG_ID_SEP + self.organization.as2_name
                 if self.partner and self.partner.as2_name:
                     self.message_id += MSG_ID_SEP + self.partner.as2_name
@@ -320,6 +331,9 @@ class MDN(models.Model):
 
     def __str__(self):
         return self.message_id
+
+    def _headers(self):
+        return dict(HeaderParser().parsestr(self.headers or '').items())
 
 
 def getorganizations():
