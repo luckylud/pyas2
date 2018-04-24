@@ -21,9 +21,6 @@ class Command(BaseCommand):
 
         for pending_mdn in in_pending_mdns:
             pending_mdn.retries += 1
-            # Parse the MDN headers from text
-            header_parser = HeaderParser()
-            mdn_headers = header_parser.parsestr(pending_mdn.headers)
             try:
                 # Set http basic auth if enabled in the partner profile
                 auth = None
@@ -41,7 +38,7 @@ class Command(BaseCommand):
                     requests.post(pending_mdn.return_url,
                                   auth=auth,
                                   verify=verify,
-                                  headers=dict(mdn_headers.items()),
+                                  headers=pending_mdn._headers(),
                                   data=payload)
                 pending_mdn.status = 'S'
                 models.Log.objects.create(message=pending_mdn.omessage,
