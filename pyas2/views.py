@@ -377,7 +377,8 @@ def as2receive(request, *args, **kwargs):
        Checks whether its an AS2 message or an MDN and acts accordingly.
     """
     # Log requests
-    pyas2init.logger.info('%(REMOTE_ADDR)s %(REQUEST_METHOD)s %(REQUEST_URI)s' % request.META)
+    pyas2init.logger.info('%(REMOTE_ADDR)s %(REQUEST_METHOD)s %(PATH_INFO)s%(QUERY_STRING)s' % request.META)
+
     if request.method == 'POST':
         as2_from = request.META.get('HTTP_AS2_FROM')
         as2_to = request.META.get('HTTP_AS2_TO')
@@ -387,21 +388,27 @@ def as2receive(request, *args, **kwargs):
         if not as2_from or not as2_to or not message_id:
             pyas2init.logger.error('%s: %s ' % (_('Invalid AS2 message received from:'), request.META['REMOTE_ADDR']))
             return HttpResponseBadRequest(_('Invalid AS2 message received.'))
-        pyas2init.logger.info('AS2 POST %(HTTP_MESSAGE_ID)s RECEIVE '
-                              'FROM %(HTTP_AS2_FROM)s TO %(HTTP_AS2_TO)s' % request.META)
+        pyas2init.logger.info('MSG-ID %(HTTP_MESSAGE_ID)s RECEIVE '
+                              'FROM <%(HTTP_AS2_FROM)s> TO <%(HTTP_AS2_TO)s>' % request.META)
 
         # Extract all the relevant headers from the http request
-        as2headers = ''
+        headers = ''
         for key, value in request.META.items():
-            if key.startswith('HTTP') or key.startswith('CONTENT'):
-                as2headers += '%s: %s\n' % (key.replace('HTTP_', '').replace('_', '-').lower(), value)
+            if key.startswith('HTTP') and value:
+                key = key.replace('HTTP_', '').replace('_', '-').lower()
+                headers += '%s: %s\n' % (key, value)
+        headers += 'content-length: %s\n' % request.META.get('CONTENT_LENGTH', '')
+        headers += 'content-type: %s\n' % request.META.get('CONTENT_TYPE', '')
+
+        pyas2init.logger.debug('REQUEST HEADERS:\n%s' % headers)
 
         # Process the posted AS2 message
         request_body = request.read()
 
-        raw_payload = '%s\n%s' % (as2headers, request_body)
-        pyas2init.logger.debug('Recevied an HTTP POST from %s with payload :\n%s' %
-                               (request.META['REMOTE_ADDR'], raw_payload))
+        pyas2init.logger.debug('REQUEST BODY:\n%s' % request_body)
+
+        raw_payload = '%s\n%s' % (headers, request_body)
+
         # Save raw AS2 message
         raw_filename = as2utils.storefile(pyas2init.gsettings['raw_receive_store'],
                                           models.MSG_ID_SEP.join((message_id,
@@ -443,8 +450,8 @@ def as2receive(request, *args, **kwargs):
                     if part.get_content_type() == 'message/disposition-notification':
                         msg_id = part.get_payload().pop().get('Original-Message-ID', '').strip('<>')
                         break
-                pyas2init.logger.info('Asynchronous MDN received for AS2 message %s to organization %s '
-                                      'from partner %s' % (msg_id, org, partner))
+                pyas2init.logger.info('Asynchronous MDN received for AS2 message <%s> to Organization <%s> '
+                                      'from Partner <%s>' % (msg_id, org, partner))
                 try:
                     error404 = ''
                     if not org:
@@ -463,11 +470,11 @@ def as2receive(request, *args, **kwargs):
 
                     models.Log.objects.create(message=message,
                                               status='S',
-                                              text=_('Processing asynchronous mdn received from partner'))
+                                              text=_('Processing incoming asynchronous mdn'))
                     as2lib.save_mdn(message, raw_payload)
 
                 except Http404 as e:
-                    pyas2init.logger.error('Unknown Asynchronous MDN AS2 message <%s>: %s' % (msg_id, e))
+                    pyas2init.logger.error('Asynchronous MDN received for unknown AS2 message <%s>: %s' % (msg_id, e))
                     # Send 404 response
                     return HttpResponseNotFound(_('Unknown AS2 MDN received. Will not be processed'))
 
@@ -500,8 +507,8 @@ def as2receive(request, *args, **kwargs):
                     # Initialize the processing status variables
                     status, adv_status, status_message = '', '', ''
 
-                    pyas2init.logger.info('Received an AS2 message with id <%s> for organization %s from partner %s' %
-                                          (message_id, org, partner))
+                    pyas2init.logger.info('Message received for Organization <%s> from Partner <%s>' %
+                                          (org, partner))
 
                     # Raise duplicate message error in case message already exists in the system
                     if models.Message.objects.filter(partner=partner,
@@ -511,7 +518,7 @@ def as2receive(request, *args, **kwargs):
                                                 message_id='%s_%s' % (message_id, payload.get('date')),
                                                 direction='IN',
                                                 status='IP',
-                                                headers=as2headers,
+                                                headers=headers,
                                                 organization=org,
                                                 partner=partner)
                         raise as2utils.As2DuplicateDocument(_('Duplicate message received !'))
@@ -522,16 +529,11 @@ def as2receive(request, *args, **kwargs):
                                                         message_id=message_id,
                                                         direction='IN',
                                                         status='IP',
-                                                        headers=as2headers,
+                                                        headers=headers,
                                                         organization=org,
                                                         partner=partner)
 
                     pyas2init.logger.debug('Message created: %s' % message)
-
-                    if not org:
-                        raise as2utils.As2PartnerNotFound('Unknown AS2 organization with id "%s"' % message_org)
-                    if not partner:
-                        raise as2utils.As2PartnerNotFound('Unknown AS2 Trading partner with id "%s"' % message_partner)
 
                     # Process the received payload to extract the actual message from partner
                     payload = as2lib.save_message(message, payload, raw_payload)
@@ -559,7 +561,7 @@ def as2receive(request, *args, **kwargs):
 
                     models.Log.objects.create(message=message,
                                               status='S',
-                                              text=_('Message has been saved successfully to %s' % full_filename))
+                                              text=_('Message saved successfully to %s' % full_filename))
 
                     message.payload = models.Payload.objects.create(name=filename,
                                                                     file=store_filename,
