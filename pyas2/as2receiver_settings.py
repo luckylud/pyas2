@@ -25,10 +25,16 @@ USE_I18N = True
 USE_L10N = True
 USE_TZ = True
 
-# PYAS2 settings
+# PYAS2 receiver settings
 from pyas2.pyas2init import Pyas2settingsModname
 pyas2settings = __import__(Pyas2settingsModname())
-from pyas2settings import *
+
+from pyas2settings import PYAS2, DATABASES, MEDIA_ROOT, SECRET_KEY
+from pyas2settings import AS2_ALLOWED_HOSTS as AS2_ALLOWED_HOSTS
+if hasattr(pyas2settings, 'DEBUG'):
+    from pyas2settings import DEBUG
+if hasattr(pyas2settings, 'DATABASE_ROUTERS'):
+    from pyas2settings import DATABASE_ROUTERS
 
 PYAS2['SERVER'] = 'receiver'
 
