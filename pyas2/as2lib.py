@@ -24,25 +24,30 @@ def save_message(message, payload, raw_payload):
         filename = payload.get_filename()
 
         # Search for the organization and partner, raise error if none exists.
-        models.Log.objects.create(message=message, status='S', text=_('Begin Processing of received AS2 message'))
+        models.Log.objects.create(message=message, status='S', text='%s: %s' % (_('Processing incoming AS2 message'), message))
+
+        if not message.organization:
+            raise as2utils.As2PartnerNotFound('Unknown AS2 Organization with id <%s>' % message._headers().get('as2-to'))
+        if not message.partner:
+            raise as2utils.As2PartnerNotFound('Unknown AS2 Partner with id <%s>' % message._headers().get('as2-from'))
 
         models.Log.objects.create(
             message=message,
             status='S',
-            text=_('Message is for Organization "%s" from partner "%s"' % (message.organization, message.partner))
+            text=_('Message is for Organization <%s> from Partner <%s>' % (message.organization, message.partner))
          )
 
         # Check if message from this partner are expected to be encrypted
         if message.partner.encryption and payload.get_content_type() != 'application/pkcs7-mime':
             raise as2utils.As2InsufficientSecurity(
-                u'Incoming messages from AS2 partner {0:s} are defined to be encrypted'.format(
+                'Incoming messages from AS2 partner {0:s} are defined to be encrypted'.format(
                     message.partner.as2_name))
 
         # Check if payload is encrypted and if so decrypt it
         if payload.get_content_type() == 'application/pkcs7-mime' \
                 and payload.get_param('smime-type') == 'enveloped-data':
             models.Log.objects.create(message=message, status='S', text=_(
-                u'Decrypting the payload using private key {0:s}'.format(message.organization.encryption_key)))
+                'Decrypting the payload using private key {0:s}'.format(message.organization.encryption_key)))
             message.encrypted = True
 
             # Check if encrypted data is base64 encoded, if not then encode
@@ -75,14 +80,14 @@ def save_message(message, payload, raw_payload):
         # Check if message from this partner are expected to be signed
         if message.partner.signature and payload.get_content_type() != 'multipart/signed':
             raise as2utils.As2InsufficientSecurity(
-                u'Incoming messages from AS2 partner {0:s} are defined to be signed'.format(message.partner.as2_name))
+                'Incoming messages from AS2 partner {0:s} are defined to be signed'.format(message.partner.as2_name))
 
         # Check if message is signed and if so verify it
         if payload.get_content_type() == 'multipart/signed':
             if not message.partner.signature_key:
                 raise as2utils.As2InsufficientSecurity('Partner has no signature verification key defined')
             models.Log.objects.create(message=message, status='S', text=_(
-                u'Message is signed, Verifying it using public key {0:s}'.format(message.partner.signature_key)))
+                'Message is signed, Verifying it using public key {0:s}'.format(message.partner.signature_key)))
             pyas2init.logger.debug('Verifying the signed payload:\n{0:s}'.format(payload.as_string()))
             message.signed = True
             mic_alg = payload.get_param('micalg').lower() or 'sha1'
@@ -544,8 +549,8 @@ def save_mdn(message, mdn_content):
             # Verify the signature using raw MDN content
             try:
                 as2utils.verify_payload(mdn_content, None, cert, ca_cert, verify_cert)
-            except Exception, e:
-                raise as2utils.As2Exception(_(u'MDN Signature Verification Error, exception message is %s' % e))
+            except Exception as e:
+                raise as2utils.As2Exception(_('MDN Signature Verification Error, exception message is %s' % e))
 
         # Save the MDN to the store
         filename = message_id.strip('<>') + '.mdn'
