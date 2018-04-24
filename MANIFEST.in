@@ -1,8 +1,9 @@
 include LICENSE
-include README.rst
-recursive-include pyas2/static *
-recursive-include pyas2/templates *
-recursive-include pyas2/templatetags *
-recursive-include pyas2/management *
-recursive-include pyas2/migrations *
-recursive-include pyas2/tests *
+include *.rst
+
+recursive-include pyas2 *
+recursive-include scripts *
+
+recursive-exclude * __pycache__
+recursive-exclude * *.py[co]
+

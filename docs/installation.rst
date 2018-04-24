@@ -8,34 +8,10 @@ Install using ``pip``...
 
     $ pip install pyas2
 
-Create a new ``django`` project
 
 .. code-block:: console
 
-    $ django-admin.py startproject django_pyas2
-
-Add ``pyas2`` to your ``INSTALLED_APPS`` setting, ensure that ``pyas2`` is placed at the top of this list. 
-
-.. code-block:: python
-
-    INSTALLED_APPS = (
-        'pyas2',
-        ...
-    )
-
-Include the pyAS2 URL configuration in your project's ``urls.py``.
-
-.. code-block:: python
-  
-  from django.conf.urls import include #add only if django version >= 1.9
-  url(r'^pyas2/', include('pyas2.urls')),
-
-
-Run the following commands to complete the installation and start the server.
-
-.. code-block:: console
-
-    $ python manage.py migrate
+    $ pyas2-migrate.py
     Operations to perform:
       Apply all migrations: pyas2, admin, contenttypes, auth, sessions
     Running migrations:
@@ -79,8 +55,8 @@ Run the following commands to complete the installation and start the server.
     20150908 07:14:32 Level 25 : PyAS2 server uses plain http (no ssl). 
 
 The ``pyAS2`` server is now up and running, the web UI for configuration and monitoring can be accessed at 
-``http://{hostname}:8080/pyas2/`` and the endpoint for receiving AS2 messages from your partners will be at
-``http://{hostname}:8080/pyas2/as2receive`` 
+``http://{hostname}:8890/`` and the endpoint for receiving AS2 messages from your partners will be at
+``http://{hostname}:8880/as2receive``
 
 Upgrading ``pyAS2``
 -------------------
@@ -93,7 +69,7 @@ Run the following commands to upgrade to the latest version:
 .. code-block:: console
 
     $ pip install -U pyas2
-    $ python manage.py migrate
+    $ pyas2-migrate.py
     Operations to perform:
       Apply all migrations: admin, pyas2, contenttypes, auth, sessions
     Running migrations:
