@@ -43,21 +43,9 @@ Messages
                             {% endif %}
                         </ul>
                     </div>
-                <td class="nowrap">{{row.timestamp|date:"Y-m-d H:i:s" }}</td>
-                <td class="nowrap">{{row.get_direction_display}}</td>
-                <td class="nowrap">
-                    {% if row.status == "S" %}
-                        <img src="{% static "admin/img/icon_success.gif" %}" style="width: 1em;"/>
-                    {% elif row.status == "E" %}
-                        <img src="{% static "admin/img/icon_error.gif" %}" style="width: 1em;"/>
-                    {% elif row.status == "W" or row.status == "R" %}
-                        <img src="{% static "admin/img/icon_alert.gif" %}" style="width: 1em;"/>
-                    {% elif row.status == "P" %}
-                        <img src="{% static "admin/img/icon_clock.gif" %}" style="width: 1em;"/>
-                    {% elif row.status == "IP" %}
-                        <img src="{% static "images/icon-pass.gif" %}" style="width: 1em;"/>
-                    {% endif %}
-                </td>
+                <td class="nowrap">{{ row.timestamp|date:"Y-m-d H:i:s" }}</td>
+                <td class="nowrap">{{ row.get_direction_display }}</td>
+                <td class="nowrap">{{ row.status_icon|safe }}</td>
                 <td class="nowrap"><a href="{% url 'pyas2:message_detail' row.message_id %}" class="pyas2link">{{row.message_id}}</a></td>
                 <td class="nowrap">{{row.organization}}</td>
                 <td class="nowrap">{{row.partner}}</td>
@@ -68,7 +56,6 @@ Messages
         {% endfor %}
         </tbody>
     </table>
-
 
     {% include "pyas2/pagination.html" %}
 

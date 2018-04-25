@@ -16,6 +16,10 @@ from . import pyas2init, as2utils
 # Initialize the pyas2 settings and loggers
 pyas2init.initialize()
 
+STATIC_URL = '/static/'
+if hasattr(pyas2init.gsettings['settings'], 'STATIC_URL'):
+    STATIC_URL = pyas2init.gsettings['settings'].STATIC_URL or STATIC_URL
+
 # Set default entry for selects
 DEFAULT_ENTRY = ('', '---------')
 
@@ -179,6 +183,14 @@ class Message(models.Model):
         ('R', _('Retry')),
         ('IP', _('In Process')),
     )
+    STATUS_ICONS = {
+        'S': 'admin/img/icon_success.gif',
+        'E': 'admin/img/icon_error.gif',
+        'W': 'admin/img/icon_alert.gif',
+        'P': 'admin/img/icon_clock.gif',
+        'R': 'admin/img/icon_alert.gif',
+        'IP': 'images/icon-pass.gif',
+    }
     MODE_CHOICES = (
         ('SYNC', _('Synchronous')),
         ('ASYNC', _('Asynchronous')),
@@ -279,6 +291,12 @@ class Message(models.Model):
                     self.run_post_send()
         super(Message, self).save(*args, **kwargs)
 
+    def status_icon(self):
+        return '<img alt="%(title)s" src="%(static)s%(icon)s" title="%(title)s" style="width: 1em;" />' % {'title': self.get_status_display(), 'static': STATIC_URL, 'icon': self.STATUS_ICONS.get(self.status)}
+
+    status_icon.allow_tags = True
+    status_icon.short_description = 'Status'
+
 
 @python_2_unicode_compatible
 class Payload(models.Model):
@@ -307,6 +325,12 @@ class Log(models.Model):
 
     def __str__(self):
         return '%s_%s_%s' % (self.message.direction, self.message, self.status)
+
+    def status_icon(self):
+        return '<img alt="%(title)s" src="%(static)s%(icon)s" title="%(title)s" style="width: 1em;" />' % {'title': self.get_status_display(), 'static': STATIC_URL, 'icon': Message.STATUS_ICONS.get(self.status)}
+
+    status_icon.allow_tags = True
+    status_icon.short_description = 'Status'
 
 
 @python_2_unicode_compatible

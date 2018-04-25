@@ -4,10 +4,10 @@
 Message
 {% endblock %}
 {% block content %}
-    <h1>Details of message {{message.message_id}}</h1>
+    <h1>Details of message {{ message.message_id }}</h1>
     <table>
         <tr><td>{% trans 'Timestamp' %}</td><td class="nowrap">{{message.timestamp|date:"Y-m-d H:i:s"}}</td></tr>
-        <tr><td>{% trans 'Status' %}</td><td>{{message.get_status_display}}</td></tr>
+        <tr><td>{% trans 'Status' %}</td><td>{{ message.status_icon|safe }} {{ message.get_status_display }}</td></tr>
         <tr><td>{% trans 'Direction' %}</td><td>{{message.get_direction_display}}</td></tr>
         <tr><td>{% trans 'Organization' %}</td><td>{{message.organization}}</td></tr>
         <tr><td>{% trans 'Partner' %}</td><td>{{message.partner}}</td></tr>
@@ -57,17 +57,9 @@ Message
         <tbody>
         {% for log in logs %}
             <tr class="{% cycle 'row1' 'row2' %}">
-                <td class="nowrap">{{log.timestamp|date:"Y-m-d H:i:s"}}</td>
-                <td>
-                    {% if log.status == "S" %}
-                        <img src="{% static "admin/img/icon_success.gif" %}" style="width: 1em;"/>
-                    {% elif log.status == "E" %}
-                        <img src="{% static "admin/img/icon_error.gif" %}" style="width: 1em;"/>
-                    {% elif log.status == "W" %}
-                        <img src="{% static "admin/img/icon_alert.gif" %}" style="width: 1em;"/>
-                    {% endif %}
-                </td>
-                <td>{{log.text}}</td>
+                <td class="nowrap">{{ log.timestamp|date:"Y-m-d H:i:s" }}</td>
+                <td class="nowrap">{{ log.status_icon|safe }}</td>
+                <td>{{ log.text }}</td>
             </tr>
         {% endfor %}
         </tbody>

@@ -71,7 +71,7 @@ class OrganizationAdmin(admin.ModelAdmin):
 
 class MessageAdmin(admin.ModelAdmin):
     readonly_fields = [f.name for f in models.Message._meta.fields]
-    list_display = ['message_id', 'status', 'direction', 'partner', 'timestamp']
+    list_display = ['message_id', 'status_icon', 'direction', 'partner', 'timestamp']
     list_filter = ['direction', 'status', 'partner']
     search_fields = ['message_id']
 
