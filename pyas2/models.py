@@ -371,9 +371,11 @@ def getpartners():
 
 @receiver(post_delete, sender=Message)
 def post_delete_message(sender, instance, *args, **kwargs):
-    """ Delete related mdn """
+    """ Delete related mdn, payload """
     if instance.mdn:
         instance.mdn.delete()
+    if instance.payload:
+        instance.payload.delete()
 
 
 @receiver(post_save, sender=Organization)
