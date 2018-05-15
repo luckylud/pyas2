@@ -1,6 +1,76 @@
 Release History
 ===============
 
+0.4.1 - 2018-04-11
+~~~~~~~~~~~~~~~
+
+* Webserver: Add cookies settings
+
+* Update views.py specialy as2receive
+         - Check AS2 validity of http request posted
+         - Save raw incoming AS2 message
+         - Cleaning
+
+* Fix & Update for retryfailedas2comms
+         - Fix increase of msg.retries, was increase by it own value each
+           time, now is only increase by one.
+           msg.retries is set to 0 by default at creation
+
+* Fix & Update for sendasyncmdn
+         - Fix for negative mdn 'unknown-trading-partner'
+           Fir for mdn.omessage with no related partner or organization
+         - Increase mdn.max_retries end set mdn.status to 'E' after MAXRETRIES
+
+* Update models.py, Message, MDN, ...
+         - Message.message_id is now a composite key (message_id, organization, partner),
+           only for incomming message message_id#organization#partner
+         - Delete related mdn when delete a message
+         - add decorator @python_2_unicode_compatible
+         - post_receive and post_send command are now trigered at
+           message.save() if message.status is 'S' success.
+         - Add default ordering for all tables queries
+
+* Add pyas2 scripts:
+           pyas2-webserver.py
+           pyas2-receiver.py
+           pyas2-daemon.py
+           pyas2-sendas2message.py
+           pyas2-sendasyncmdn.py
+           pyas2-retryfailedcoms.py
+           pyas2-migrate.py
+           pyas2-shell.py
+           pyas2-test.py
+           pyas2-cleanas2server.py
+
+* Fix send_message for ASYNC MDN
+         - When async mdn is return immediatly after request.post by as2 parnter,
+           message.status was saved to pending 'P' while as2receive already updated
+           message.status to 'S' or 'E'
+
+* Use multiprocess.Process to call management.call_command
+
+* Fix and update sendmessage
+         Fix: temp file was never closed
+
+* Update logging Initialisation
+
+* Add standalone as2 receiver and pyas2 webserver
+         MEDIA_ROOT settings needed to cleanly store certificates for django
+         Set up PYAS2 with environment variable:
+             PYAS2_ROOT=/path/to/pyas2_data/
+             or overide all pyas2.config.pyas2settings
+             PYAS2_SETTINGS_FILE=/path/to/pyas2settings.py
+
+         By default, there are two databases (default:webserver and pyas2)
+         Populate databases:
+                 pyas2-migrate.py
+
+         run as2 receiver:
+                 pyas2-receiver.py
+
+         run pyas2 webserver:
+                 pyas2-webserver.py
+
 0.4.0 - 2017-01-27
 ~~~~~~~~~~~~~~~
 

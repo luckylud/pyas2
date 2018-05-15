@@ -6,22 +6,34 @@ your `project's settings.py <https://docs.djangoproject.com/en/1.8/ref/settings/
 .. code-block:: python
 
     PYAS2 = {
-        'ENVIRONMENT' : 'production', 
-        'PORT' : 8888, 
-        'SSLCERTIFICATE' : '/path_to_cert/server_cert.pem', 
-        'SSLPRIVATEKEY' : '/path_to_cert/server_privkey.pem',
-        'DATADIR' : '/path_to_datadir/data', 
-        'PYTHONPATH' : '/path_to_python/python', 
-        'ENVIRONMENTTEXT' : 'BETA',  
-        'ENVIRONMENTTEXTCOLOR' : 'Yellow', 
-        'LOGLEVEL' : 'DEBUG', 
-        'LOGCONSOLE' : True, 
-        'LOGCONSOLELEVEL' : 'DEBUG', 
-        'MAXRETRIES': 5,    
-        'MDNURL' : 'https://192.168.1.115:8888/pyas2/as2receive', 
-        'ASYNCMDNWAIT' : 30,
-        'MAXARCHDAYS' : 30, 
+        'ENVIRONMENT': 'default',
+        'DATADIR': '/path/to/pyas2/data',
+        'MEDIAURI': 'pyas2',
+        # As2 receiver ###
+        'AS2HOST': 'localhost',  # set WAN IP or domaine hostname
+        'AS2PORT': 8880,
+        'AS2URI': 'as2receive',
+        # MDN URL # uncomment to overide, default mdn url is build
+        # this way  http(s)://AS2HOST:AS2PORT/AS2URI
+        #'MDNURL': 'http(s)://localhost:8089/as2receive',
+        'ASYNCMDNWAIT': 30,
+        # https ########
+        #'SSLCERTIFICATE': '/path_to_cert/server_cert.pem',
+        #'SSLPRIVATEKEY': '/path_to_cert/server_privkey.pem',
+        'LOGLEVEL': 'DEBUG',
+        'LOGCONSOLE': True,
+        'LOGCONSOLELEVEL': 'DEBUG',
+        'MAXRETRIES': 5,
+        'MAXARCHDAYS': 30,
+        # DAEMON ###
+        'DAEMONPORT': 16388,
+        # Webserver ###
+        'HOST': 'localhost',
+        'PORT': 8890,
+        'ENVIRONMENTTEXT': 'BETA',
+        'ENVIRONMENTTEXTCOLOR': 'Yellow',
     }
+    MEDIA_ROOT = os.path.join(PYAS2['DATADIR'], 'media')
 
 The available settings along with their usage is described below:
 
