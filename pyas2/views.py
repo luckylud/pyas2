@@ -393,12 +393,22 @@ def as2receive(request, *args, **kwargs):
 
         # Extract all the relevant headers from the http request
         headers = ''
+        content_headers = {}
         for key, value in request.META.items():
             if key.startswith('HTTP') and value:
                 key = key.replace('HTTP_', '').replace('_', '-').lower()
                 headers += '%s: %s\n' % (key, value)
-        headers += 'content-length: %s\n' % request.META.get('CONTENT_LENGTH', '')
-        headers += 'content-type: %s\n' % request.META.get('CONTENT_TYPE', '')
+            elif key.startswith('CONTENT') and value:
+                key = key.replace('_', '-').lower()
+                content_headers[key] = value
+
+        # Very strange M2C BUG with signed ASYNC MDN if key come from content_headers.keys() ...
+        # Signature verification failed if headers are formated with key from content_headers ...
+        #
+        # 'content-encoding' and 'content-disposition' come from HTTP_CONTENT_*
+        for key in ['content-length', 'content-type']:
+            if content_headers.get(key):
+                headers += '%s: %s\n' % (key, content_headers.get(key))
 
         pyas2init.logger.debug('REQUEST HEADERS:\n%s' % headers)
 
