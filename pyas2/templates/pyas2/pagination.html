@@ -1,19 +1,34 @@
 {% load i18n pyas2_extras %}
-    <div class="paginator">
-        <p class="float-left">Showing {{ page_obj.start_index }} to
-            {{ page_obj.end_index }} of {{ page_obj.paginator.count }} entries</p>
-        <span class="step-links float-right">
-            {% if page_obj.has_previous %}
-                <a href="{% append_to_get page=page_obj.previous_page_number%}">Previous </a>
-            {% endif %}
-
-            <span class="current">
-                Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
-            </span>
-
-            {% if page_obj.has_next %}
-                <a href="{% append_to_get page=page_obj.next_page_number %}"> Next</a>
-            {% endif %}
-        </span>
-    </div>
+<div class="paginator">
+    <p class="float-left">Showing {{ page_obj.start_index }} to
+        {{ page_obj.end_index }} of {{ page_obj.paginator.count }} entries</p>
+    <span class="step-links float-right">
+    {% if page_obj.paginator.num_pages > 1 %}
+        {% if page_obj.has_previous %}
+            <input type="button" name="first" value="&lt;&lt;" onclick="window.location='{% append_to_get page=1 %}';" />
+            <input type="button" name="previous" value="&lt;" onclick="window.location='{% append_to_get page=page_obj.previous_page_number %}';" />
+        {% else %}
+            <input disabled type="submit" name="first" value="&lt;&lt;" />
+            <input disabled type="submit" name="previous" value="&lt;" />
+        {% endif %}
+        {% if page_obj.paginator.num_pages > 1 and page_obj.paginator.num_pages < 99 %}
+            <label for="id_page" style="position:absolute;margin-top:-1.2em;margin-left:0.2em;">Page</label>
+            <select id="id_page" name="page" onchange="windows.location={% append_to_get page=page_obj.next_page_number %}this.form.submit();">
+            {% for i in "x"|rjust:page_obj.paginator.num_pages %}
+                <option value="{{ forloop.counter }}"{% if forloop.counter == page_obj.number %} selected="selected"{% endif %}>{{ forloop.counter }}</option>
+            {% endfor %}
+            </select>
+        {% else %}
+            <input type="text" id="id_page" name="page" maxlength="4" size="2" value="{{ page_obj.number }}" onchange="this.form.submit();" />
+        {% endif %} / {{ page_obj.paginator.num_pages }}
+        {% if page_obj.has_next %}
+            <input type="submit" name="next" value="&gt;" onclick="window.location='{% append_to_get page=page_obj.next_page_number %}';" />
+            <input type="submit" name="last" value="&gt;&gt;" onclick="window.location='{% append_to_get page=page_obj.paginator.num_pages %}';" />
+        {% else %}
+            <input disabled type="submit" name="next" value="&gt;" />
+            <input disabled type="submit" name="last" value="&gt;&gt;" />
+        {% endif %}
+    {% endif %}
+    </span>
+</div>
 
